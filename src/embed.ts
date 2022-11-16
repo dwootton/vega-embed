@@ -13,9 +13,10 @@ import {
   LoaderOptions,
   mergeConfig,
   Renderers,
+  SignalValue,
   Spec as VgSpec,
   TooltipHandler,
-  View,
+  View
 } from 'vega';
 import {expressionInterpreter} from 'vega-interpreter';
 import * as vegaLiteImport from 'vega-lite';
@@ -65,6 +66,7 @@ const I18N = {
   PNG_ACTION: 'Save as PNG',
   SOURCE_ACTION: 'View Source',
   SVG_ACTION: 'Save as SVG',
+  QUERY_ACTION: 'Copy Selection as Query'
 };
 
 export interface EmbedOptions<S = string, R = Renderers> {
@@ -99,17 +101,17 @@ export interface EmbedOptions<S = string, R = Renderers> {
 
 const NAMES: {[key in Mode]: string} = {
   vega: 'Vega',
-  'vega-lite': 'Vega-Lite',
+  'vega-lite': 'Vega-Lite'
 };
 
 const VERSION = {
   vega: vega.version,
-  'vega-lite': vegaLite ? vegaLite.version : 'not available',
+  'vega-lite': vegaLite ? vegaLite.version : 'not available'
 };
 
 const PREPROCESSOR: {[mode in Mode]: (spec: any, config?: Config) => VgSpec} = {
   vega: (vgSpec: VgSpec) => vgSpec,
-  'vega-lite': (vlSpec, config) => vegaLite.compile(vlSpec as VlSpec, {config: config as VlConfig}).spec,
+  'vega-lite': (vlSpec, config) => vegaLite.compile(vlSpec as VlSpec, {config: config as VlConfig}).spec
 };
 
 const SVG_CIRCLES = `
@@ -254,7 +256,7 @@ export default async function embed(
 
   const mergedOpts = {
     ...mergeDeep(parsedOpts, usermetaOpts),
-    config: mergeConfig(parsedOpts.config ?? {}, usermetaOpts.config ?? {}),
+    config: mergeConfig(parsedOpts.config ?? {}, usermetaOpts.config ?? {})
   };
 
   return await _embed(el, parsedSpec, mergedOpts, loader);
@@ -266,7 +268,7 @@ async function loadOpts(opt: EmbedOptions, loader: Loader): Promise<EmbedOptions
   return {
     ...(opt as any),
     ...(patch ? {patch} : {}),
-    ...(config ? {config} : {}),
+    ...(config ? {config} : {})
   };
 }
 
@@ -375,7 +377,7 @@ async function _embed(
     loader,
     logLevel,
     renderer,
-    ...(ast ? {expr: (vega as any).expressionInterpreter ?? opts.expr ?? expressionInterpreter} : {}),
+    ...(ast ? {expr: (vega as any).expressionInterpreter ?? opts.expr ?? expressionInterpreter} : {})
   });
 
   view.addSignalListener('autosize', (_, autosize: Exclude<AutoSize, string>) => {
@@ -519,13 +521,33 @@ async function _embed(
           config: config as Config,
           mode,
           renderer,
-          spec: stringify(spec),
+          spec: stringify(spec)
         });
         e.preventDefault();
       });
 
       ctrl.append(editorLink);
     }
+
+    // search through each dataset with _store ending, get selection names
+
+    console.log('add selection to pandas action', view, actions);
+    const actionsPandas = true;
+    // add 'Open in Vega Editor' action
+    //if (actionsPandas !== false) {
+    const pandasLink = document.createElement('a');
+
+    pandasLink.text = i18n.QUERY_ACTION;
+    pandasLink.href = '#';
+    pandasLink.addEventListener('click', function (this, e) {
+      const signal = view.signal('my_best_param');
+      console.log('selected signal', signal);
+
+      createQueryFromSignal(signal, view);
+    });
+
+    ctrl.append(pandasLink);
+    //}
   }
 
   function finalize() {
@@ -536,4 +558,111 @@ async function _embed(
   }
 
   return {view, spec, vgSpec, finalize, embedOptions: opts};
+}
+function cleanVegaProperties(source: any[], vgsidData: any[]) {
+  const keys = Object.keys(source[0]);
+
+  return keepKeys(vgsidData, keys);
+}
+
+function keepKeys(array: any[], keysToKeep: any[]) {
+  return array.map((o) =>
+    keysToKeep.reduce((acc, curr) => {
+      acc[curr] = o[curr];
+      return acc;
+    }, {})
+  );
+}
+
+function createQueryFromSignal(signal: SignalValue, view: View) {
+  if ('vlPoint' in signal) {
+    // point selection, select the corresponding data fields
+    const selection = signal['vlPoint'];
+
+    const vgsidToSelect = selection['or'].map((item: any) => item._vgsid_);
+    console.log('selecting vgsid', vgsidToSelect);
+
+    const sourceName = 'source_0';
+    const dataName = 'data_0';
+
+    const source = view.data(sourceName);
+    console.log('source', source);
+
+    const data = view.data(dataName);
+    console.log('data', data);
+
+    const selectedItems = cleanVegaProperties(
+      source,
+      data.filter((datum) => vgsidToSelect.includes(datum._vgsid_))
+    );
+
+    console.log('cleanedItems', selectedItems);
+    const query = createQueryFromData(selectedItems);
+    console.log('copying', query);
+    copyTextToClipboard(query);
+
+    // after selecting an item create filter
+  }
+  // TODO:
+  // if point selection
+  // select all of the fields on the data value
+}
+
+function createQueryFromData(data: any[]) {
+  let stringConstructor: string[] = [];
+  for (const datum of data) {
+    let datumStringConstructor = [];
+    const keys = Object.keys(datum);
+    for (const key of keys) {
+      datumStringConstructor.push(`${key.toString()}==${encodeValueAsString(datum[key])}`);
+    }
+    stringConstructor.push('(' + datumStringConstructor.join(' and ') + ')');
+  }
+  return '"' + stringConstructor.join(' or ') + '"';
+}
+
+function encodeValueAsString(datumValue: any) {
+  if (isString(datumValue)) {
+    return "'" + datumValue + "'";
+  }
+  return datumValue.toString();
+}
+
+//from https://stackoverflow.com/questions/400212/how-do-i-copy-to-the-clipboard-in-javascript
+function fallbackCopyTextToClipboard(text: string) {
+  var textArea = document.createElement('textarea');
+  textArea.value = text;
+
+  // Avoid scrolling to bottom
+  textArea.style.top = '0';
+  textArea.style.left = '0';
+  textArea.style.position = 'fixed';
+
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+
+  try {
+    var successful = document.execCommand('copy');
+    var msg = successful ? 'successful' : 'unsuccessful';
+    console.log('Fallback: Copying text command was ' + msg);
+  } catch (err) {
+    console.error('Fallback: Oops, unable to copy', err);
+  }
+
+  document.body.removeChild(textArea);
+}
+function copyTextToClipboard(text: string) {
+  if (!navigator.clipboard) {
+    fallbackCopyTextToClipboard(text);
+    return;
+  }
+  navigator.clipboard.writeText(text).then(
+    function () {
+      console.log('Async: Copying to clipboard was successful!');
+    },
+    function (err) {
+      console.error('Async: Could not copy text: ', err);
+    }
+  );
 }
