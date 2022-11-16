@@ -47,6 +47,7 @@ export interface Actions {
   export?: boolean | {svg?: boolean; png?: boolean};
   source?: boolean;
   compiled?: boolean;
+  copySelection?: boolean;
   editor?: boolean;
 }
 
@@ -531,23 +532,41 @@ async function _embed(
 
     // search through each dataset with _store ending, get selection names
 
-    console.log('add selection to pandas action', view, actions);
-    const actionsPandas = true;
-    // add 'Open in Vega Editor' action
-    //if (actionsPandas !== false) {
-    const pandasLink = document.createElement('a');
+    if (mode == 'vega-lite' || actions === true || actions.copySelection !== false) {
+      if (actions !== true) {
+        const actionsPandas = true;
+        // add 'Open in Vega Editor' action
+        //if (actionsPandas !== false) {
+        const pandasLink = document.createElement('a');
 
-    pandasLink.text = i18n.QUERY_ACTION;
-    pandasLink.href = '#';
-    pandasLink.addEventListener('click', function (this, e) {
-      const signal = view.signal('my_best_param');
-      console.log('selected signal', signal);
+        pandasLink.text = i18n.QUERY_ACTION;
+        pandasLink.href = '#';
 
-      createQueryFromSignal(signal, view);
-    });
+        pandasLink.addEventListener('click', function (this, e) {
+          const {data} = view.getState({data: vega.truthy, signals: vega.falsy, recurse: true});
 
-    ctrl.append(pandasLink);
-    //}
+          // as selections store their data in a dataset with the suffix "*_store", find those selections
+          const selectionNames = Object.keys(data)
+            .filter((key) => key.includes('_store'))
+            .map((key) => key.replace('_store', ''));
+
+          const queries = [];
+
+          for (const selection of selectionNames) {
+            const signal = view.signal(selection);
+
+            if (signal) {
+              queries.push(createQueryFromSelectionName(selection, view));
+            }
+          }
+
+          copyTextToClipboard(queries.join(' and '));
+          e.preventDefault();
+        });
+
+        ctrl.append(pandasLink);
+      }
+    }
   }
 
   function finalize() {
@@ -559,6 +578,7 @@ async function _embed(
 
   return {view, spec, vgSpec, finalize, embedOptions: opts};
 }
+
 function cleanVegaProperties(source: any[], vgsidData: any[]) {
   const keys = Object.keys(source[0]);
 
@@ -574,35 +594,71 @@ function keepKeys(array: any[], keysToKeep: any[]) {
   );
 }
 
-function createQueryFromSignal(signal: SignalValue, view: View) {
+function createQueryFromSelectionName(selectionName: string, view: View) {
+  const signal = view.signal(selectionName);
+
   if ('vlPoint' in signal) {
-    // point selection, select the corresponding data fields
     const selection = signal['vlPoint'];
 
     const vgsidToSelect = selection['or'].map((item: any) => item._vgsid_);
-    console.log('selecting vgsid', vgsidToSelect);
 
     const sourceName = 'source_0';
     const dataName = 'data_0';
 
     const source = view.data(sourceName);
-    console.log('source', source);
 
     const data = view.data(dataName);
-    console.log('data', data);
 
     const selectedItems = cleanVegaProperties(
       source,
       data.filter((datum) => vgsidToSelect.includes(datum._vgsid_))
     );
 
-    console.log('cleanedItems', selectedItems);
     const query = createQueryFromData(selectedItems);
-    console.log('copying', query);
-    copyTextToClipboard(query);
+    return query;
 
     // after selecting an item create filter
+  } else {
+    // interval selection
+    // TODO: account for interval selection on ordinal
+
+    const selectionTuple = view.signal(selectionName + '_tuple_fields');
+    let queries: string[] = [];
+
+    // top level of _store object corresponds with the # of the selection (ie multi brush), this should typically be of length 1
+    const selectionInstances = view.data(selectionName + '_store');
+
+    for (const fieldIndex in selectionTuple) {
+      // if field is
+      if (selectionTuple[fieldIndex].type == 'E') {
+        // ordinal and nominal interval selections
+        selectionInstances.map((selectionInstance) => {
+          selectionInstance.fields[fieldIndex].field;
+          const fieldName = selectionInstance.fields[fieldIndex].field;
+          const categoricalValues = selectionInstance.values[fieldIndex];
+
+          queries.push(createQueryFromCategoricalInterval(fieldName, categoricalValues));
+        });
+      } else {
+        // quantitative interval selections
+        selectionInstances.map((selectionInstance) => {
+          selectionInstance.fields[fieldIndex].field;
+          const fieldName = selectionInstance.fields[fieldIndex].field;
+          const [lowerBound, upperBound] = selectionInstance.values[fieldIndex];
+
+          queries.push(createQueryFromBounds(fieldName, lowerBound, upperBound));
+        });
+      }
+    }
+    return queries.join(' and ');
   }
+
+  // ordinal interval:
+  // selection = {u:[3,4,5]} // ie all selected values
+
+  // quant interval:
+  // selection = {u:[3.2,5.3222222]} // ie bounds
+
   // TODO:
   // if point selection
   // select all of the fields on the data value
@@ -618,12 +674,27 @@ function createQueryFromData(data: any[]) {
     }
     stringConstructor.push('(' + datumStringConstructor.join(' and ') + ')');
   }
-  return '"' + stringConstructor.join(' or ') + '"';
+  return '(' + stringConstructor.join(' or ') + ')';
+}
+
+function createQueryFromCategoricalInterval(field: string, data: string[]) {
+  let stringConstructor: string[] = [];
+  for (const datum of data) {
+    stringConstructor.push(`${field.toString()}==${encodeValueAsString(datum)}`);
+  }
+  return ' (' + stringConstructor.join(' or ') + ') ';
+}
+
+function createQueryFromBounds(fieldName: string, lowerBound: number, upperBound: number) {
+  return ` (${fieldName}>=${lowerBound} and ${fieldName}<=${upperBound}) `;
 }
 
 function encodeValueAsString(datumValue: any) {
   if (isString(datumValue)) {
-    return "'" + datumValue + "'";
+    //@ts-ignore, as isNaN will determine if string can be parsed as number
+    if (isNaN(datumValue)) {
+      return "'" + datumValue + "'";
+    }
   }
   return datumValue.toString();
 }

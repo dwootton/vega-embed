@@ -30,31 +30,16 @@
         const spec = {
           $schema: "https://vega.github.io/schema/vega-lite/v5.json",
           data: {
-            values: [
-              { u: 1, v: 28 },
-              { u: 2, v: 55 },
-              { u: 3, v: 42 },
-              { u: 4, v: 34 },
-              { u: 5, v: 36 },
-              { u: 6, v: 48 }
-            ]
+            url: "https://gist.githubusercontent.com/dwootton/faf7769597f3304140afc722839e2771/raw/3bfdac3a9b4340061f505b7987ab6321fe449f50/cars.csv"
           },
-
-          params: [
-            {
-              name: "my_best_param",
-              select: { type: "interval", encodings: ["x"] }
-            }
-          ],
-          mark: "line",
+          params: [{ name: "pts", select: "interval" }],
+          mark: "rect",
           encoding: {
-            x: {
-              field: "u",
-              type: "nominal"
-            },
-            y: {
-              field: "v",
-              type: "quantitative"
+            y: { field: "Origin", type: "ordinal" },
+            x: { field: "Cylinders", type: "ordinal" },
+            color: {
+              condition: { param: "pts", aggregate: "count" },
+              value: "grey"
             }
           }
         };
