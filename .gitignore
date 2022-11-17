@@ -4,7 +4,7 @@
 .prettierignore
 babel.config.js
 beemo-error.log
-build
+
 build-es5
 coverage/
 jest.config.js
