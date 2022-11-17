@@ -4985,7 +4985,10 @@
             selectionInstances.map(selectionInstance => {
               selectionInstance.fields[fieldIndex].field;
               const fieldName = selectionInstance.fields[fieldIndex].field;
-              const [lowerBound, upperBound] = selectionInstance.values[fieldIndex];
+              const bounds = selectionInstance.values[fieldIndex].sort(function (a, b) {
+                return a - b;
+              });
+              const [lowerBound, upperBound] = bounds;
               queries.push(createQueryFromBounds(fieldName, lowerBound, upperBound));
             });
           }

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vega-Embed for Vega-Lite</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+    <script src="build/vega-embed.js"></script>
+  </head>
+
+  <body>
+    <div id="vis"></div>
+    <script>
+      async function run() {
+        //// http://[::]:8081/test-vl-interval-select-ordinal.html#
+        const config = {
+          // default view background color
+          // covers the entire view component
+          background: "#efefef",
+          axis: {
+            labelFont: "serif",
+            labelFontSize: 16,
+            tickWidth: 3,
+            tickColor: "red"
+          }
+        };
+
+        const spec = {
+          config: { view: { continuousWidth: 400, continuousHeight: 300 } },
+          data: { name: "data-f02450ab61490a1363517a0190416235" },
+          mark: "point",
+          encoding: {
+            color: {
+              condition: { field: "Origin", type: "nominal", param: "param_1" },
+              value: "lightgray"
+            },
+            x: { field: "Horsepower", type: "quantitative" },
+            y: { field: "Miles_per_Gallon", type: "quantitative" }
+          },
+          params: [{ name: "param_1", select: { type: "interval" } }],
+          $schema: "https://vega.github.io/schema/vega-lite/v5.2.0.json",
+          data: {
+            url: "https://gist.githubusercontent.com/dwootton/faf7769597f3304140afc722839e2771/raw/3bfdac3a9b4340061f505b7987ab6321fe449f50/cars.csv"
+          }
+        };
+
+        const result = await vegaEmbed("#vis", spec, {
+          config: config,
+          tooltip: { theme: "dark" }
+        });
+
+        console.log(result);
+      }
+      run();
+    </script>
+  </body>
+</html>

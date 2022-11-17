@@ -3313,9 +3313,12 @@ function createQueryFromSelectionName(selectionName, view) {
           selectionInstances.map(selectionInstance => {
             selectionInstance.fields[fieldIndex].field;
             var fieldName = selectionInstance.fields[fieldIndex].field;
-            var _selectionInstance$va = _slicedToArray(selectionInstance.values[fieldIndex], 2),
-              lowerBound = _selectionInstance$va[0],
-              upperBound = _selectionInstance$va[1];
+            var bounds = selectionInstance.values[fieldIndex].sort(function (a, b) {
+              return a - b;
+            });
+            var _bounds = _slicedToArray(bounds, 2),
+              lowerBound = _bounds[0],
+              upperBound = _bounds[1];
             queries.push(createQueryFromBounds(fieldName, lowerBound, upperBound));
           });
         }

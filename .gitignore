@@ -15,3 +15,6 @@ src/style.ts
 tsconfig.json
 yarn-debug.log*
 yarn-error.log*
+
+
+https://cdn.jsdelivr.net/gh/dwootton/vega-embed/build/vega-embed.min.js
