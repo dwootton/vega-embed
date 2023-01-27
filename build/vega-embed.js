@@ -4543,6 +4543,7 @@
   <circle r="2" cy="8" cx="14"></circle>
 </svg>`;
     const CHART_WRAPPER_CLASS = 'chart-wrapper';
+    const COPY_ALERT_ID = 'copy-alert';
     function isTooltipHandler(h) {
       return typeof h === 'function';
     }
@@ -4599,6 +4600,22 @@
       }
       return opts;
     }
+    window.addEventListener('copy', () => {
+      console.log('copy event fired');
+      if (window.currentClicked) {
+        console.log('current!');
+        const func = window.currentClicked;
+        func();
+      }
+    });
+    const handleMouseEvent = e => {
+      console.log('handled!');
+      // for any mouse down outside of vega element, clear
+      window.currentClicked = null;
+      // Do something
+    };
+
+    window.addEventListener('mousedown', handleMouseEvent); // associate the function above with the click event
 
     /**
      * Embed a Vega visualization component in a web page. This function returns a promise.
@@ -4893,12 +4910,45 @@
 
         if (mode == 'vega-lite' || actions === true || actions.copySelection !== false) {
           if (actions !== true) {
+            // add
+            // if clicked on and haven't clicked on anything else
+
+            // if a copy event fires and the container is clicked, copy the selection
+            const copyAlert = document.createElement('div');
+            copyAlert.id = COPY_ALERT_ID;
+            copyAlert.innerHTML = 'Copied!';
+            copyAlert.style.opacity = '0';
+            copyAlert.style.textAlign = 'center';
+            element.appendChild(copyAlert);
+            view.addEventListener('mousedown', function (event) {
+              console.log('setting current click');
+              window.currentClicked = () => {
+                copyText();
+              };
+              event.preventDefault();
+              event.stopPropagation();
+            });
             // add 'Open in Vega Editor' action
             //if (actionsPandas !== false) {
             const pandasLink = document.createElement('a');
             pandasLink.text = i18n.QUERY_ACTION;
             pandasLink.href = '#';
-            pandasLink.addEventListener('click', function (e) {
+            function animateCopy() {
+              var _document$getElementB;
+              console.log('copying!', document.getElementById(COPY_ALERT_ID));
+              (_document$getElementB = document.getElementById(COPY_ALERT_ID)) === null || _document$getElementB === void 0 ? void 0 : _document$getElementB.animate([{
+                opacity: '1',
+                color: '#000'
+              }, {
+                opacity: '0',
+                color: '#000'
+              }], {
+                duration: 750,
+                iterations: 1
+              });
+            }
+            const copyText = function () {
+              animateCopy();
               const {
                 data
               } = view.getState({
@@ -4916,9 +4966,11 @@
                   queries.push(createQueryFromSelectionName(selection, view));
                 }
               }
-              copyTextToClipboard(queries.join(' and '));
-              e.preventDefault();
-            });
+              copyTextToClipboard('df.query(' + queries.join(' and ') + ')');
+              //e.preventDefault();
+            };
+
+            pandasLink.addEventListener('click', copyText);
             ctrl.append(pandasLink);
           }
         }

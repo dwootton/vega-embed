@@ -2705,6 +2705,7 @@ var PREPROCESSOR = {
 };
 var SVG_CIRCLES = "\n<svg viewBox=\"0 0 16 16\" fill=\"currentColor\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <circle r=\"2\" cy=\"8\" cx=\"2\"></circle>\n  <circle r=\"2\" cy=\"8\" cx=\"8\"></circle>\n  <circle r=\"2\" cy=\"8\" cx=\"14\"></circle>\n</svg>";
 var CHART_WRAPPER_CLASS = 'chart-wrapper';
+var COPY_ALERT_ID = 'copy-alert';
 function isTooltipHandler(h) {
   return typeof h === 'function';
 }
@@ -2761,6 +2762,22 @@ function embedOptionsFromUsermeta(parsedSpec) {
   }
   return opts;
 }
+window.addEventListener('copy', () => {
+  console.log('copy event fired');
+  if (window.currentClicked) {
+    console.log('current!');
+    var func = window.currentClicked;
+    func();
+  }
+});
+var handleMouseEvent = e => {
+  console.log('handled!');
+  // for any mouse down outside of vega element, clear
+  window.currentClicked = null;
+  // Do something
+};
+
+window.addEventListener('mousedown', handleMouseEvent); // associate the function above with the click event
 
 /**
  * Embed a Vega visualization component in a web page. This function returns a promise.
@@ -2953,7 +2970,10 @@ function _embed3() {
       _opts$editorUrl,
       editorUrl,
       editorLink,
+      animateCopy,
+      copyAlert,
       pandasLink,
+      copyText,
       finalize,
       _args4 = arguments;
     return _regeneratorRuntime.wrap(function _callee4$(_context4) {
@@ -3211,11 +3231,43 @@ function _embed3() {
 
               if (mode == 'vega-lite' || actions === true || actions.copySelection !== false) {
                 if (actions !== true) {
+                  animateCopy = function animateCopy() {
+                    var _document$getElementB;
+                    console.log('copying!', document.getElementById(COPY_ALERT_ID));
+                    (_document$getElementB = document.getElementById(COPY_ALERT_ID)) === null || _document$getElementB === void 0 ? void 0 : _document$getElementB.animate([{
+                      opacity: '1',
+                      color: '#000'
+                    }, {
+                      opacity: '0',
+                      color: '#000'
+                    }], {
+                      duration: 750,
+                      iterations: 1
+                    });
+                  };
+                  // add
+                  // if clicked on and haven't clicked on anything else
+                  // if a copy event fires and the container is clicked, copy the selection
+                  copyAlert = document.createElement('div');
+                  copyAlert.id = COPY_ALERT_ID;
+                  copyAlert.innerHTML = 'Copied!';
+                  copyAlert.style.opacity = '0';
+                  copyAlert.style.textAlign = 'center';
+                  element.appendChild(copyAlert);
+                  view.addEventListener('mousedown', function (event) {
+                    console.log('setting current click');
+                    window.currentClicked = () => {
+                      copyText();
+                    };
+                    event.preventDefault();
+                    event.stopPropagation();
+                  });
                   //if (actionsPandas !== false) {
                   pandasLink = document.createElement('a');
                   pandasLink.text = i18n.QUERY_ACTION;
                   pandasLink.href = '#';
-                  pandasLink.addEventListener('click', function (e) {
+                  copyText = function copyText() {
+                    animateCopy();
                     var _view$getState = view.getState({
                         data: vega.truthy,
                         signals: vega.falsy,
@@ -3241,9 +3293,11 @@ function _embed3() {
                     } finally {
                       _iterator4.f();
                     }
-                    copyTextToClipboard(queries.join(' and '));
-                    e.preventDefault();
-                  });
+                    copyTextToClipboard('df.query(' + queries.join(' and ') + ')');
+                    //e.preventDefault();
+                  };
+
+                  pandasLink.addEventListener('click', copyText);
                   ctrl.append(pandasLink);
                 }
               }
