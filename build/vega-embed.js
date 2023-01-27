@@ -4918,7 +4918,11 @@
             copyAlert.id = COPY_ALERT_ID;
             copyAlert.innerHTML = 'Copied!';
             copyAlert.style.opacity = '0';
-            copyAlert.style.textAlign = 'center';
+            copyAlert.style.fontFamily = 'Lato, Helvetica, sans-serif';
+            copyAlert.style.color = 'white';
+            copyAlert.style.margin = '0 auto';
+            copyAlert.style.background = 'green';
+            copyAlert.style.width = 'fit-content';
             element.appendChild(copyAlert);
             view.addEventListener('mousedown', function (event) {
               console.log('setting current click');
@@ -4935,20 +4939,18 @@
             pandasLink.href = '#';
             function animateCopy() {
               var _document$getElementB;
-              console.log('copying!', document.getElementById(COPY_ALERT_ID));
               (_document$getElementB = document.getElementById(COPY_ALERT_ID)) === null || _document$getElementB === void 0 ? void 0 : _document$getElementB.animate([{
                 opacity: '1',
-                color: '#000'
+                transform: 'translateY(-10px)'
               }, {
                 opacity: '0',
-                color: '#000'
+                transform: 'translateY(0px)'
               }], {
                 duration: 750,
                 iterations: 1
               });
             }
             const copyText = function () {
-              animateCopy();
               const {
                 data
               } = view.getState({
@@ -4959,14 +4961,25 @@
 
               // as selections store their data in a dataset with the suffix "*_store", find those selections
               const selectionNames = Object.keys(data).filter(key => key.includes('_store')).map(key => key.replace('_store', ''));
-              const queries = [];
+              let queries = [];
               for (const selection of selectionNames) {
                 const signal = view.signal(selection);
                 if (signal) {
                   queries.push(createQueryFromSelectionName(selection, view));
                 }
               }
-              copyTextToClipboard('df.query(' + queries.join(' and ') + ')');
+              queries = queries.filter(query => query != '');
+              const text = 'df.query(' + queries.join(' and ') + ')';
+              if (queries.length !== 0) {
+                console.log(queries);
+                const copyPromise = copyTextToClipboard(text);
+                copyPromise.then(function () {
+                  animateCopy();
+                }, function (err) {
+                  console.error('Async: Could not copy text: ', err);
+                });
+              }
+
               //e.preventDefault();
             };
 
@@ -5017,32 +5030,35 @@
         // interval selection
         // TODO: account for interval selection on ordinal
 
-        const selectionTuple = view.signal(selectionName + '_tuple_fields');
+        //const selectionTuple = view.signal(selectionName + '_tuple_fields');
         let queries = [];
 
         // top level of _store object corresponds with the # of the selection (ie multi brush), this should typically be of length 1
         const selectionInstances = view.data(selectionName + '_store');
-        for (const fieldIndex in selectionTuple) {
+        for (const selection of selectionInstances) {
           // if field is
-          if (selectionTuple[fieldIndex].type == 'E') {
-            // ordinal and nominal interval selections
-            selectionInstances.map(selectionInstance => {
-              selectionInstance.fields[fieldIndex].field;
-              const fieldName = selectionInstance.fields[fieldIndex].field;
-              const categoricalValues = selectionInstance.values[fieldIndex];
-              queries.push(createQueryFromCategoricalInterval(fieldName, categoricalValues));
-            });
-          } else {
-            // quantitative interval selections
-            selectionInstances.map(selectionInstance => {
-              selectionInstance.fields[fieldIndex].field;
-              const fieldName = selectionInstance.fields[fieldIndex].field;
-              const bounds = selectionInstance.values[fieldIndex].sort(function (a, b) {
-                return a - b;
+          for (const fieldIndex in selection.fields) {
+            const field = selection.fields[fieldIndex];
+            if (field.type == 'E') {
+              // ordinal and nominal interval selections
+              selectionInstances.map(selectionInstance => {
+                const fieldName = field.field;
+                // todo, make this
+                const categoricalValues = selectionInstance.values[fieldIndex];
+                queries.push(createQueryFromCategoricalInterval(fieldName, categoricalValues));
               });
-              const [lowerBound, upperBound] = bounds;
-              queries.push(createQueryFromBounds(fieldName, lowerBound, upperBound));
-            });
+            } else {
+              // quantitative interval selections
+              selectionInstances.map(selectionInstance => {
+                selectionInstance.fields[fieldIndex].field;
+                const fieldName = field.field;
+                const bounds = selectionInstance.values[fieldIndex].sort(function (a, b) {
+                  return a - b;
+                });
+                const [lowerBound, upperBound] = bounds;
+                queries.push(createQueryFromBounds(fieldName, lowerBound, upperBound));
+              });
+            }
           }
         }
         return queries.join(' and ');
@@ -5105,23 +5121,22 @@
       textArea.select();
       try {
         var successful = document.execCommand('copy');
-        var msg = successful ? 'successful' : 'unsuccessful';
-        console.log('Fallback: Copying text command was ' + msg);
+        if (successful) {
+          return Promise.resolve('successful');
+        } else {
+          return Promise.reject('unsuccessful');
+        }
       } catch (err) {
         console.error('Fallback: Oops, unable to copy', err);
       }
       document.body.removeChild(textArea);
+      return Promise.reject('unsuccessful');
     }
     function copyTextToClipboard(text) {
       if (!navigator.clipboard) {
-        fallbackCopyTextToClipboard(text);
-        return;
+        return fallbackCopyTextToClipboard(text);
       }
-      navigator.clipboard.writeText(text).then(function () {
-        console.log('Async: Copying to clipboard was successful!');
-      }, function (err) {
-        console.error('Async: Could not copy text: ', err);
-      });
+      return navigator.clipboard.writeText(text);
     }
 
     /**

@@ -2763,15 +2763,12 @@ function embedOptionsFromUsermeta(parsedSpec) {
   return opts;
 }
 window.addEventListener('copy', () => {
-  console.log('copy event fired');
   if (window.currentClicked) {
-    console.log('current!');
     var func = window.currentClicked;
     func();
   }
 });
 var handleMouseEvent = e => {
-  console.log('handled!');
   // for any mouse down outside of vega element, clear
   window.currentClicked = null;
   // Do something
@@ -2962,8 +2959,8 @@ function _embed3() {
       details,
       summary,
       ctrl,
-      _iterator3,
-      _step3,
+      _iterator4,
+      _step4,
       _loop2,
       viewSourceLink,
       compileLink,
@@ -3134,10 +3131,10 @@ function _embed3() {
 
               // add 'Export' action
               if (actions === true || actions.export !== false) {
-                _iterator3 = _createForOfIteratorHelper(['svg', 'png']);
+                _iterator4 = _createForOfIteratorHelper(['svg', 'png']);
                 try {
                   _loop2 = function _loop2() {
-                    var ext = _step3.value;
+                    var ext = _step4.value;
                     if (actions === true || actions.export === true || actions.export[ext]) {
                       var i18nExportAction = i18n["".concat(ext.toUpperCase(), "_ACTION")];
                       var exportLink = document.createElement('a');
@@ -3173,13 +3170,13 @@ function _embed3() {
                       ctrl.append(exportLink);
                     }
                   };
-                  for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
+                  for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
                     _loop2();
                   }
                 } catch (err) {
-                  _iterator3.e(err);
+                  _iterator4.e(err);
                 } finally {
-                  _iterator3.f();
+                  _iterator4.f();
                 }
               }
 
@@ -3233,13 +3230,12 @@ function _embed3() {
                 if (actions !== true) {
                   animateCopy = function animateCopy() {
                     var _document$getElementB;
-                    console.log('copying!', document.getElementById(COPY_ALERT_ID));
                     (_document$getElementB = document.getElementById(COPY_ALERT_ID)) === null || _document$getElementB === void 0 ? void 0 : _document$getElementB.animate([{
                       opacity: '1',
-                      color: '#000'
+                      transform: 'translateY(-10px)'
                     }, {
                       opacity: '0',
-                      color: '#000'
+                      transform: 'translateY(0px)'
                     }], {
                       duration: 750,
                       iterations: 1
@@ -3252,10 +3248,13 @@ function _embed3() {
                   copyAlert.id = COPY_ALERT_ID;
                   copyAlert.innerHTML = 'Copied!';
                   copyAlert.style.opacity = '0';
-                  copyAlert.style.textAlign = 'center';
+                  copyAlert.style.fontFamily = 'Lato, Helvetica, sans-serif';
+                  copyAlert.style.color = 'white';
+                  copyAlert.style.margin = '0 auto';
+                  copyAlert.style.background = 'green';
+                  copyAlert.style.width = 'fit-content';
                   element.appendChild(copyAlert);
                   view.addEventListener('mousedown', function (event) {
-                    console.log('setting current click');
                     window.currentClicked = () => {
                       copyText();
                     };
@@ -3267,7 +3266,6 @@ function _embed3() {
                   pandasLink.text = i18n.QUERY_ACTION;
                   pandasLink.href = '#';
                   copyText = function copyText() {
-                    animateCopy();
                     var _view$getState = view.getState({
                         data: vega.truthy,
                         signals: vega.falsy,
@@ -3278,22 +3276,32 @@ function _embed3() {
                     // as selections store their data in a dataset with the suffix "*_store", find those selections
                     var selectionNames = Object.keys(data).filter(key => key.includes('_store')).map(key => key.replace('_store', ''));
                     var queries = [];
-                    var _iterator4 = _createForOfIteratorHelper(selectionNames),
-                      _step4;
+                    var _iterator5 = _createForOfIteratorHelper(selectionNames),
+                      _step5;
                     try {
-                      for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
-                        var selection = _step4.value;
+                      for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
+                        var selection = _step5.value;
                         var signal = view.signal(selection);
                         if (signal) {
                           queries.push(createQueryFromSelectionName(selection, view));
                         }
                       }
                     } catch (err) {
-                      _iterator4.e(err);
+                      _iterator5.e(err);
                     } finally {
-                      _iterator4.f();
+                      _iterator5.f();
                     }
-                    copyTextToClipboard('df.query(' + queries.join(' and ') + ')');
+                    queries = queries.filter(query => query != '');
+                    var text = 'df.query(' + queries.join(' and ') + ')';
+                    if (queries.length !== 0) {
+                      var copyPromise = copyTextToClipboard(text);
+                      copyPromise.then(function () {
+                        animateCopy();
+                      }, function (err) {
+                        console.error('Async: Could not copy text: ', err);
+                      });
+                    }
+
                     //e.preventDefault();
                   };
 
@@ -3347,38 +3355,50 @@ function createQueryFromSelectionName(selectionName, view) {
       // interval selection
       // TODO: account for interval selection on ordinal
 
-      var selectionTuple = view.signal(selectionName + '_tuple_fields');
+      //const selectionTuple = view.signal(selectionName + '_tuple_fields');
       var queries = [];
 
       // top level of _store object corresponds with the # of the selection (ie multi brush), this should typically be of length 1
       var selectionInstances = view.data(selectionName + '_store');
-      var _loop = function _loop(fieldIndex) {
-        // if field is
-        if (selectionTuple[fieldIndex].type == 'E') {
-          // ordinal and nominal interval selections
-          selectionInstances.map(selectionInstance => {
-            selectionInstance.fields[fieldIndex].field;
-            var fieldName = selectionInstance.fields[fieldIndex].field;
-            var categoricalValues = selectionInstance.values[fieldIndex];
-            queries.push(createQueryFromCategoricalInterval(fieldName, categoricalValues));
-          });
-        } else {
-          // quantitative interval selections
-          selectionInstances.map(selectionInstance => {
-            selectionInstance.fields[fieldIndex].field;
-            var fieldName = selectionInstance.fields[fieldIndex].field;
-            var bounds = selectionInstance.values[fieldIndex].sort(function (a, b) {
-              return a - b;
-            });
-            var _bounds = _slicedToArray(bounds, 2),
-              lowerBound = _bounds[0],
-              upperBound = _bounds[1];
-            queries.push(createQueryFromBounds(fieldName, lowerBound, upperBound));
-          });
+      var _iterator = _createForOfIteratorHelper(selectionInstances),
+        _step;
+      try {
+        for (_iterator.s(); !(_step = _iterator.n()).done;) {
+          var _selection = _step.value;
+          var _loop = function _loop(fieldIndex) {
+            var field = _selection.fields[fieldIndex];
+            if (field.type == 'E') {
+              // ordinal and nominal interval selections
+              selectionInstances.map(selectionInstance => {
+                var fieldName = field.field;
+                // todo, make this
+                var categoricalValues = selectionInstance.values[fieldIndex];
+                queries.push(createQueryFromCategoricalInterval(fieldName, categoricalValues));
+              });
+            } else {
+              // quantitative interval selections
+              selectionInstances.map(selectionInstance => {
+                selectionInstance.fields[fieldIndex].field;
+                var fieldName = field.field;
+                var bounds = selectionInstance.values[fieldIndex].sort(function (a, b) {
+                  return a - b;
+                });
+                var _bounds = _slicedToArray(bounds, 2),
+                  lowerBound = _bounds[0],
+                  upperBound = _bounds[1];
+                queries.push(createQueryFromBounds(fieldName, lowerBound, upperBound));
+              });
+            }
+          };
+          // if field is
+          for (var fieldIndex in _selection.fields) {
+            _loop(fieldIndex);
+          }
         }
-      };
-      for (var fieldIndex in selectionTuple) {
-        _loop(fieldIndex);
+      } catch (err) {
+        _iterator.e(err);
+      } finally {
+        _iterator.f();
       }
       return {
         v: queries.join(' and ')
@@ -3400,11 +3420,11 @@ function createQueryFromSelectionName(selectionName, view) {
 
 function createQueryFromData(data) {
   var stringConstructor = [];
-  var _iterator = _createForOfIteratorHelper(data),
-    _step;
+  var _iterator2 = _createForOfIteratorHelper(data),
+    _step2;
   try {
-    for (_iterator.s(); !(_step = _iterator.n()).done;) {
-      var datum = _step.value;
+    for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+      var datum = _step2.value;
       var datumStringConstructor = [];
       var keys = Object.keys(datum);
       for (var _i = 0, _keys = keys; _i < _keys.length; _i++) {
@@ -3414,25 +3434,25 @@ function createQueryFromData(data) {
       stringConstructor.push('(' + datumStringConstructor.join(' and ') + ')');
     }
   } catch (err) {
-    _iterator.e(err);
+    _iterator2.e(err);
   } finally {
-    _iterator.f();
+    _iterator2.f();
   }
   return '(' + stringConstructor.join(' or ') + ')';
 }
 function createQueryFromCategoricalInterval(field, data) {
   var stringConstructor = [];
-  var _iterator2 = _createForOfIteratorHelper(data),
-    _step2;
+  var _iterator3 = _createForOfIteratorHelper(data),
+    _step3;
   try {
-    for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
-      var datum = _step2.value;
+    for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
+      var datum = _step3.value;
       stringConstructor.push("".concat(field.toString(), "==").concat(encodeValueAsString(datum)));
     }
   } catch (err) {
-    _iterator2.e(err);
+    _iterator3.e(err);
   } finally {
-    _iterator2.f();
+    _iterator3.f();
   }
   return ' (' + stringConstructor.join(' or ') + ') ';
 }
@@ -3463,23 +3483,22 @@ function fallbackCopyTextToClipboard(text) {
   textArea.select();
   try {
     var successful = document.execCommand('copy');
-    var msg = successful ? 'successful' : 'unsuccessful';
-    console.log('Fallback: Copying text command was ' + msg);
+    if (successful) {
+      return Promise.resolve('successful');
+    } else {
+      return Promise.reject('unsuccessful');
+    }
   } catch (err) {
     console.error('Fallback: Oops, unable to copy', err);
   }
   document.body.removeChild(textArea);
+  return Promise.reject('unsuccessful');
 }
 function copyTextToClipboard(text) {
   if (!navigator.clipboard) {
-    fallbackCopyTextToClipboard(text);
-    return;
+    return fallbackCopyTextToClipboard(text);
   }
-  navigator.clipboard.writeText(text).then(function () {
-    console.log('Async: Copying to clipboard was successful!');
-  }, function (err) {
-    console.error('Async: Could not copy text: ', err);
-  });
+  return navigator.clipboard.writeText(text);
 }
 
 export { DEFAULT_ACTIONS, embed as default, guessMode, vega, _vegaLite as vegaLite, version };

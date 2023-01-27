@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vega-Embed for Vega-Lite</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+    <script src="build/vega-embed.js"></script>
+  </head>
+
+  <body>
+    <div id="vis"></div>
+    <script>
+      async function run() {
+        //// http://[::]:8081/test-vl-interval-select-ordinal.html#
+        const config = {
+          // default view background color
+          // covers the entire view component
+          background: "#efefef",
+          axis: {
+            labelFont: "serif",
+            labelFontSize: 16,
+            tickWidth: 3,
+            tickColor: "red"
+          }
+        };
+
+        const spec = {
+          config: { view: { continuousWidth: 400, continuousHeight: 300 } },
+          vconcat: [
+            {
+              layer: [
+                {
+                  mark: { type: "bar", color: "lightgray" },
+                  encoding: {
+                    x: {
+                      axis: null,
+                      bin: true,
+                      field: "Horsepower",
+                      type: "quantitative"
+                    },
+                    y: { aggregate: "count", axis: null, type: "quantitative" }
+                  }
+                },
+                {
+                  mark: { type: "bar", color: "steelblue" },
+                  encoding: {
+                    x: {
+                      axis: null,
+                      bin: true,
+                      field: "Horsepower",
+                      type: "quantitative"
+                    },
+                    y: { aggregate: "count", axis: null, type: "quantitative" }
+                  },
+                  selection: {
+                    brush: {
+                      type: "interval",
+                      encodings: ["x"],
+                      resolve: "intersect"
+                    }
+                  },
+                  transform: [{ filter: { selection: "brush" } }]
+                }
+              ],
+              height: 50,
+              width: 200
+            },
+            {
+              hconcat: [
+                {
+                  layer: [
+                    {
+                      mark: { type: "circle", color: "lightgray" },
+                      encoding: {
+                        size: { aggregate: "count", type: "quantitative" },
+                        x: {
+                          axis: {},
+                          bin: true,
+                          field: "Horsepower",
+                          scale: { zero: false },
+                          type: "quantitative"
+                        },
+                        y: {
+                          axis: {},
+                          bin: true,
+                          field: "Miles_per_Gallon",
+                          scale: { zero: false },
+                          type: "quantitative"
+                        }
+                      }
+                    },
+                    {
+                      mark: "circle",
+                      encoding: {
+                        size: { aggregate: "count", type: "quantitative" },
+                        x: {
+                          axis: {},
+                          bin: true,
+                          field: "Horsepower",
+                          scale: { zero: false },
+                          type: "quantitative"
+                        },
+                        y: {
+                          axis: {},
+                          bin: true,
+                          field: "Miles_per_Gallon",
+                          scale: { zero: false },
+                          type: "quantitative"
+                        }
+                      },
+                      transform: [{ filter: { selection: "brush" } }, { filter: { selection: "brush" } }]
+                    }
+                  ],
+                  height: 200,
+                  width: 200
+                },
+                {
+                  layer: [
+                    {
+                      mark: { type: "bar", color: "lightgray" },
+                      encoding: {
+                        x: {
+                          aggregate: "count",
+                          axis: null,
+                          type: "quantitative"
+                        },
+                        y: {
+                          axis: null,
+                          bin: true,
+                          field: "Miles_per_Gallon",
+                          type: "quantitative"
+                        }
+                      }
+                    },
+                    {
+                      mark: { type: "bar", color: "steelblue" },
+                      encoding: {
+                        x: {
+                          aggregate: "count",
+                          axis: null,
+                          type: "quantitative"
+                        },
+                        y: {
+                          axis: null,
+                          bin: true,
+                          field: "Miles_per_Gallon",
+                          type: "quantitative"
+                        }
+                      },
+                      selection: {
+                        brush: {
+                          type: "interval",
+                          encodings: ["y"],
+                          resolve: "intersect"
+                        }
+                      },
+                      transform: [{ filter: { selection: "brush" } }]
+                    }
+                  ],
+                  height: 200,
+                  width: 50
+                }
+              ],
+              spacing: -10
+            }
+          ],
+          data: { name: "data-f02450ab61490a1363517a0190416235" },
+          spacing: -10,
+          $schema: "https://vega.github.io/schema/vega-lite/v4.17.0.json",
+          data: {
+            url: "https://gist.githubusercontent.com/dwootton/faf7769597f3304140afc722839e2771/raw/3bfdac3a9b4340061f505b7987ab6321fe449f50/cars.csv"
+          }
+        };
+
+        const result = await vegaEmbed("#vis", spec, {
+          config: config,
+          tooltip: { theme: "dark" }
+        });
+
+        console.log(result);
+      }
+      run();
+    </script>
+  </body>
+</html>
