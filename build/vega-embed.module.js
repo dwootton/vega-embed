@@ -2805,43 +2805,44 @@ function _embed2() {
         switch (_context.prev = _context.next) {
           case 0:
             opts = _args.length > 2 && _args[2] !== undefined ? _args[2] : {};
+            console.log('embedding dywootto!');
             if (!isString(spec)) {
-              _context.next = 10;
+              _context.next = 11;
               break;
             }
             loader = createLoader(opts.loader);
             _context.t0 = JSON;
-            _context.next = 6;
+            _context.next = 7;
             return loader.load(spec);
-          case 6:
+          case 7:
             _context.t1 = _context.sent;
             parsedSpec = _context.t0.parse.call(_context.t0, _context.t1);
-            _context.next = 11;
+            _context.next = 12;
             break;
-          case 10:
-            parsedSpec = spec;
           case 11:
+            parsedSpec = spec;
+          case 12:
             loadedEmbedOptions = embedOptionsFromUsermeta(parsedSpec);
             usermetaLoader = loadedEmbedOptions.loader; // either create the loader for the first time or create a new loader if the spec has new loader options
             if (!loader || usermetaLoader) {
               loader = createLoader((_opts$loader = opts.loader) !== null && _opts$loader !== void 0 ? _opts$loader : usermetaLoader);
             }
-            _context.next = 16;
+            _context.next = 17;
             return loadOpts(loadedEmbedOptions, loader);
-          case 16:
+          case 17:
             usermetaOpts = _context.sent;
-            _context.next = 19;
+            _context.next = 20;
             return loadOpts(opts, loader);
-          case 19:
+          case 20:
             parsedOpts = _context.sent;
             mergedOpts = _objectSpread(_objectSpread({}, mergeDeep(parsedOpts, usermetaOpts)), {}, {
               config: mergeConfig((_parsedOpts$config = parsedOpts.config) !== null && _parsedOpts$config !== void 0 ? _parsedOpts$config : {}, (_usermetaOpts$config = usermetaOpts.config) !== null && _usermetaOpts$config !== void 0 ? _usermetaOpts$config : {})
             });
-            _context.next = 23;
+            _context.next = 24;
             return _embed(el, parsedSpec, mergedOpts, loader);
-          case 23:
-            return _context.abrupt("return", _context.sent);
           case 24:
+            return _context.abrupt("return", _context.sent);
+          case 25:
           case "end":
             return _context.stop();
         }

@@ -4627,6 +4627,7 @@
       let opts = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
       let parsedSpec;
       let loader;
+      console.log('embedding dywootto!');
       if (vegaImport.isString(spec)) {
         loader = createLoader(opts.loader);
         parsedSpec = JSON.parse(await loader.load(spec));

@@ -251,7 +251,7 @@ export default async function embed(
 ): Promise<Result> {
   let parsedSpec: VisualizationSpec;
   let loader: Loader | undefined;
-  console.log('embedding!');
+  console.log('embedding dywootto!');
   if (isString(spec)) {
     loader = createLoader(opts.loader);
     parsedSpec = JSON.parse(await loader.load(spec));
