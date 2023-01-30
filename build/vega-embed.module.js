@@ -3234,7 +3234,7 @@ function _embed3() {
                       opacity: '1',
                       transform: 'translateY(-10px)'
                     }, {
-                      opacity: '0',
+                      opacity: '0.5',
                       transform: 'translateY(0px)'
                     }], {
                       duration: 750,
@@ -3247,7 +3247,7 @@ function _embed3() {
                   copyAlert = document.createElement('div');
                   copyAlert.id = COPY_ALERT_ID;
                   copyAlert.innerHTML = 'Copied!';
-                  copyAlert.style.opacity = '0';
+                  copyAlert.style.opacity = '0.5';
                   copyAlert.style.fontFamily = 'Lato, Helvetica, sans-serif';
                   copyAlert.style.color = 'white';
                   copyAlert.style.margin = '0 auto';

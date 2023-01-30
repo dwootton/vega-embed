@@ -251,7 +251,7 @@ export default async function embed(
 ): Promise<Result> {
   let parsedSpec: VisualizationSpec;
   let loader: Loader | undefined;
-
+  console.log('embedding!');
   if (isString(spec)) {
     loader = createLoader(opts.loader);
     parsedSpec = JSON.parse(await loader.load(spec));
@@ -556,7 +556,7 @@ async function _embed(
         const copyAlert = document.createElement('div');
         copyAlert.id = COPY_ALERT_ID;
         copyAlert.innerHTML = 'Copied!';
-        copyAlert.style.opacity = '0';
+        copyAlert.style.opacity = '0.5';
         copyAlert.style.fontFamily = 'Lato, Helvetica, sans-serif';
         copyAlert.style.color = 'white';
         copyAlert.style.margin = '0 auto';
@@ -586,7 +586,7 @@ async function _embed(
           document.getElementById(COPY_ALERT_ID)?.animate(
             [
               {opacity: '1', transform: 'translateY(-10px)'},
-              {opacity: '0', transform: 'translateY(0px)'}
+              {opacity: '0.5', transform: 'translateY(0px)'}
             ],
             {
               duration: 750,

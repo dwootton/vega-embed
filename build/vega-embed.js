@@ -4601,15 +4601,12 @@
       return opts;
     }
     window.addEventListener('copy', () => {
-      console.log('copy event fired');
       if (window.currentClicked) {
-        console.log('current!');
         const func = window.currentClicked;
         func();
       }
     });
     const handleMouseEvent = e => {
-      console.log('handled!');
       // for any mouse down outside of vega element, clear
       window.currentClicked = null;
       // Do something
@@ -4917,7 +4914,7 @@
             const copyAlert = document.createElement('div');
             copyAlert.id = COPY_ALERT_ID;
             copyAlert.innerHTML = 'Copied!';
-            copyAlert.style.opacity = '0';
+            copyAlert.style.opacity = '0.5';
             copyAlert.style.fontFamily = 'Lato, Helvetica, sans-serif';
             copyAlert.style.color = 'white';
             copyAlert.style.margin = '0 auto';
@@ -4925,7 +4922,6 @@
             copyAlert.style.width = 'fit-content';
             element.appendChild(copyAlert);
             view.addEventListener('mousedown', function (event) {
-              console.log('setting current click');
               window.currentClicked = () => {
                 copyText();
               };
@@ -4943,7 +4939,7 @@
                 opacity: '1',
                 transform: 'translateY(-10px)'
               }, {
-                opacity: '0',
+                opacity: '0.5',
                 transform: 'translateY(0px)'
               }], {
                 duration: 750,
@@ -4971,7 +4967,6 @@
               queries = queries.filter(query => query != '');
               const text = 'df.query(' + queries.join(' and ') + ')';
               if (queries.length !== 0) {
-                console.log(queries);
                 const copyPromise = copyTextToClipboard(text);
                 copyPromise.then(function () {
                   animateCopy();
