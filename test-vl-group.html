@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vega-Embed for Vega-Lite</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+    <script src="build/vega-embed.js"></script>
+  </head>
+
+  <body>
+    <div id="vis"></div>
+    <script>
+      async function run() {
+        //// http://[::]:8081/test-vl-interval-select-ordinal.html#
+        const config = {
+          // default view background color
+          // covers the entire view component
+          background: "#efefef",
+          axis: {
+            labelFont: "serif",
+            labelFontSize: 16,
+            tickWidth: 3,
+            tickColor: "red"
+          }
+        };
+
+        const spec = {
+          config: { view: { continuousWidth: 400, continuousHeight: 300 } },
+          data: { url: "https://raw.githubusercontent.com/vega/vega-datasets/next/data/movies.json" },
+          mark: { type: "bar", cursor: "pointer" },
+          encoding: {
+            tooltip: { field: "_tooltip_column", type: "nominal" },
+            x: {
+              axis: {},
+              field: "ALX_GROUP_COLUMN_Major_Genre",
+              sort: "-y",
+              type: "nominal"
+            },
+            y: {
+              aggregate: "count",
+              axis: {},
+              field: "Major_Genre",
+              type: "quantitative"
+            }
+          },
+          height: 150,
+          params: [
+            {
+              name: "ALX_SELECTION_click_GROUP",
+              select: { type: "point", encodings: ["x"] }
+            }
+          ],
+          transform: [
+            { calculate: "datum['Major Genre']", as: "Major_Genre" },
+            {
+              calculate:
+                'if(isDefined(ALX_SELECTION_click_GROUP["ALX_GROUP_COLUMN_Major_Genre"]), indexof(ALX_SELECTION_click_GROUP["ALX_GROUP_COLUMN_Major_Genre"],datum["Major_Genre"]) > -1 ? "Group" : datum["Major_Genre"], datum["Major_Genre"] )',
+              as: "ALX_GROUP_COLUMN_Major_Genre"
+            },
+            {
+              calculate:
+                'if(isDefined(ALX_SELECTION_click_GROUP["ALX_GROUP_COLUMN_Major_Genre"]), datum["ALX_GROUP_COLUMN_Major_Genre"] == "Group"? ALX_SELECTION_click_GROUP["ALX_GROUP_COLUMN_Major_Genre"] : datum["ALX_GROUP_COLUMN_Major_Genre"], datum["ALX_GROUP_COLUMN_Major_Genre"] ) + " : " + datum["Major_Genre"]',
+              as: "_tooltip_column"
+            }
+          ],
+          width: 250,
+          $schema: "https://vega.github.io/schema/vega-lite/v5.2.0.json"
+        };
+
+        const result = await vegaEmbed("#vis", spec, {
+          config: config,
+          tooltip: { theme: "dark" }
+        });
+
+        console.log(result);
+      }
+      run();
+    </script>
+  </body>
+</html>

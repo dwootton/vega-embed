@@ -2960,8 +2960,8 @@ function _embed3() {
       details,
       summary,
       ctrl,
-      _iterator4,
-      _step4,
+      _iterator5,
+      _step5,
       _loop2,
       viewSourceLink,
       compileLink,
@@ -3132,10 +3132,10 @@ function _embed3() {
 
               // add 'Export' action
               if (actions === true || actions.export !== false) {
-                _iterator4 = _createForOfIteratorHelper(['svg', 'png']);
+                _iterator5 = _createForOfIteratorHelper(['svg', 'png']);
                 try {
                   _loop2 = function _loop2() {
-                    var ext = _step4.value;
+                    var ext = _step5.value;
                     if (actions === true || actions.export === true || actions.export[ext]) {
                       var i18nExportAction = i18n["".concat(ext.toUpperCase(), "_ACTION")];
                       var exportLink = document.createElement('a');
@@ -3171,13 +3171,13 @@ function _embed3() {
                       ctrl.append(exportLink);
                     }
                   };
-                  for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
+                  for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
                     _loop2();
                   }
                 } catch (err) {
-                  _iterator4.e(err);
+                  _iterator5.e(err);
                 } finally {
-                  _iterator4.f();
+                  _iterator5.f();
                 }
               }
 
@@ -3275,25 +3275,43 @@ function _embed3() {
 
                     // as selections store their data in a dataset with the suffix "*_store", find those selections
                     var selectionNames = Object.keys(data).filter(key => key.includes('_store')).map(key => key.replace('_store', ''));
-                    var queries = [];
-                    var _iterator5 = _createForOfIteratorHelper(selectionNames),
-                      _step5;
+                    var queries = {
+                      group: [],
+                      filter: []
+                    };
+                    var _iterator6 = _createForOfIteratorHelper(selectionNames),
+                      _step6;
                     try {
-                      for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
-                        var selection = _step5.value;
+                      for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
+                        var selection = _step6.value;
+                        console.log('');
+                        if (!selection.includes('ALX')) continue;
                         var signal = view.signal(selection);
                         if (signal) {
-                          queries.push(createQueryFromSelectionName(selection, view));
+                          if (selection.includes('GROUP')) {
+                            console.log('about to group', signal);
+                            var group = createGroupFromSelectionName(selection, view);
+                            if (group !== '') {
+                              queries.filter.push(group);
+                            }
+                          } else if (selection.includes('FILTER')) {
+                            var query = createQueryFromSelectionName(selection, view);
+                            if (query !== '') {
+                              queries.filter.push(query);
+                            }
+                          }
                         }
                       }
                     } catch (err) {
-                      _iterator5.e(err);
+                      _iterator6.e(err);
                     } finally {
-                      _iterator5.f();
+                      _iterator6.f();
                     }
-                    queries = queries.filter(query => query != '');
-                    var text = 'df.query("' + queries.join(' and ') + '")';
-                    if (queries.length !== 0) {
+                    var filter_text = queries['filter'].join(' and ');
+                    var group_text = queries['group'].join("\n          ");
+                    var text = filter_text + group_text;
+                    console.log('your text', text);
+                    if (text.length > 0) {
                       var copyPromise = copyTextToClipboard(text);
                       copyPromise.then(function () {
                         animateCopy();
@@ -3336,6 +3354,31 @@ function keepKeys(array, keysToKeep) {
     return acc;
   }, {}));
 }
+function createGroupFromSelectionName(selectionName, view) {
+  var query = '';
+  var signal = view.signal(selectionName);
+  if ('vlPoint' in signal) {
+    var signalKeys = Object.keys(signal);
+    var groupField = signalKeys.find(str => str.includes('ALX_GROUP_COLUMN'));
+    var categoriesToGroup = signal[groupField];
+    var mapping = {};
+    var _iterator = _createForOfIteratorHelper(categoriesToGroup),
+      _step;
+    try {
+      for (_iterator.s(); !(_step = _iterator.n()).done;) {
+        var category = _step.value;
+        mapping[category] = 'Group';
+      }
+    } catch (err) {
+      _iterator.e(err);
+    } finally {
+      _iterator.f();
+    }
+    var featureName = groupField.replace('ALX_GROUP_COLUMN_', '');
+    query = "\nALX_MAP = ".concat(JSON.stringify(mapping), "\ndf[\"ALX_GROUP\"] = df[\"").concat(featureName, "\"].map(ALX_MAP).fillna(df[\"").concat(featureName, "\"])\ndf.groupby(\"ALX_GROUP\").mean(numeric_only=True)\n    ");
+  }
+  return query;
+}
 function createQueryFromSelectionName(selectionName, view) {
   var signal = view.signal(selectionName);
   if ('vlPoint' in signal) {
@@ -3360,11 +3403,11 @@ function createQueryFromSelectionName(selectionName, view) {
 
       // top level of _store object corresponds with the # of the selection (ie multi brush), this should typically be of length 1
       var selectionInstances = view.data(selectionName + '_store');
-      var _iterator = _createForOfIteratorHelper(selectionInstances),
-        _step;
+      var _iterator2 = _createForOfIteratorHelper(selectionInstances),
+        _step2;
       try {
-        for (_iterator.s(); !(_step = _iterator.n()).done;) {
-          var _selection = _step.value;
+        for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+          var _selection = _step2.value;
           var _loop = function _loop(fieldIndex) {
             var field = _selection.fields[fieldIndex];
             if (field.type == 'E') {
@@ -3396,9 +3439,9 @@ function createQueryFromSelectionName(selectionName, view) {
           }
         }
       } catch (err) {
-        _iterator.e(err);
+        _iterator2.e(err);
       } finally {
-        _iterator.f();
+        _iterator2.f();
       }
       return {
         v: queries.join(' and ')
@@ -3420,11 +3463,11 @@ function createQueryFromSelectionName(selectionName, view) {
 
 function createQueryFromData(data) {
   var stringConstructor = [];
-  var _iterator2 = _createForOfIteratorHelper(data),
-    _step2;
+  var _iterator3 = _createForOfIteratorHelper(data),
+    _step3;
   try {
-    for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
-      var datum = _step2.value;
+    for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
+      var datum = _step3.value;
       var datumStringConstructor = [];
       var keys = Object.keys(datum);
       for (var _i = 0, _keys = keys; _i < _keys.length; _i++) {
@@ -3434,25 +3477,25 @@ function createQueryFromData(data) {
       stringConstructor.push('(' + datumStringConstructor.join(' and ') + ')');
     }
   } catch (err) {
-    _iterator2.e(err);
+    _iterator3.e(err);
   } finally {
-    _iterator2.f();
+    _iterator3.f();
   }
   return '(' + stringConstructor.join(' or ') + ')';
 }
 function createQueryFromCategoricalInterval(field, data) {
   var stringConstructor = [];
-  var _iterator3 = _createForOfIteratorHelper(data),
-    _step3;
+  var _iterator4 = _createForOfIteratorHelper(data),
+    _step4;
   try {
-    for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
-      var datum = _step3.value;
+    for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
+      var datum = _step4.value;
       stringConstructor.push("".concat(field.toString(), "==").concat(encodeValueAsString(datum)));
     }
   } catch (err) {
-    _iterator3.e(err);
+    _iterator4.e(err);
   } finally {
-    _iterator3.f();
+    _iterator4.f();
   }
   return ' (' + stringConstructor.join(' or ') + ') ';
 }

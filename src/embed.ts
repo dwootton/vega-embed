@@ -598,20 +598,41 @@ async function _embed(
             .filter((key) => key.includes('_store'))
             .map((key) => key.replace('_store', ''));
 
-          let queries: string[] = [];
+          const queries: Record<string, string[]> = {
+            group: [],
+            filter: []
+          };
 
           for (const selection of selectionNames) {
+            console.log('');
+            if (!selection.includes('ALX')) continue;
+
             const signal = view.signal(selection);
 
             if (signal) {
-              queries.push(createQueryFromSelectionName(selection, view));
+              if (selection.includes('GROUP')) {
+                console.log('about to group', signal);
+
+                const group = createGroupFromSelectionName(selection, view);
+                if (group !== '') {
+                  queries.filter.push(group);
+                }
+              } else if (selection.includes('FILTER')) {
+                const query = createQueryFromSelectionName(selection, view);
+                if (query !== '') {
+                  queries.filter.push(query);
+                }
+              }
             }
           }
 
-          queries = queries.filter((query) => query != '');
+          const filter_text = queries['filter'].join(' and ');
+          const group_text = queries['group'].join(`
+          `);
 
-          const text = 'df.query("' + queries.join(' and ') + '")';
-          if (queries.length !== 0) {
+          const text = filter_text + group_text;
+          console.log('your text', text);
+          if (text.length > 0) {
             const copyPromise = copyTextToClipboard(text);
             copyPromise.then(
               function () {
@@ -656,6 +677,30 @@ function keepKeys(array: any[], keysToKeep: any[]) {
       return acc;
     }, {})
   );
+}
+function createGroupFromSelectionName(selectionName: string, view: View) {
+  let query = '';
+
+  const signal = view.signal(selectionName);
+
+  if ('vlPoint' in signal) {
+    const signalKeys = Object.keys(signal);
+    const groupField = signalKeys.find((str) => str.includes('ALX_GROUP_COLUMN')) as string;
+
+    const categoriesToGroup = signal[groupField];
+
+    const mapping: Record<string, string> = {};
+    for (const category of categoriesToGroup) {
+      mapping[category] = 'Group';
+    }
+    const featureName = groupField.replace('ALX_GROUP_COLUMN_', '');
+    query = `
+ALX_MAP = ${JSON.stringify(mapping)}
+df["ALX_GROUP"] = df["${featureName}"].map(ALX_MAP).fillna(df["${featureName}"])
+df.groupby("ALX_GROUP").mean(numeric_only=True)
+    `;
+  }
+  return query;
 }
 
 function createQueryFromSelectionName(selectionName: string, view: View) {
