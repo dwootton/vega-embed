@@ -4915,7 +4915,7 @@
             const copyAlert = document.createElement('div');
             copyAlert.id = COPY_ALERT_ID;
             copyAlert.innerHTML = 'Copied!';
-            copyAlert.style.opacity = '0.5';
+            copyAlert.style.opacity = '0';
             copyAlert.style.fontFamily = 'Lato, Helvetica, sans-serif';
             copyAlert.style.color = 'white';
             copyAlert.style.margin = '0 auto';
@@ -4929,8 +4929,6 @@
               event.preventDefault();
               event.stopPropagation();
             });
-            // add 'Open in Vega Editor' action
-            //if (actionsPandas !== false) {
             const pandasLink = document.createElement('a');
             pandasLink.text = i18n.QUERY_ACTION;
             pandasLink.href = '#';
@@ -4940,7 +4938,7 @@
                 opacity: '1',
                 transform: 'translateY(-10px)'
               }, {
-                opacity: '0.5',
+                opacity: '0',
                 transform: 'translateY(0px)'
               }], {
                 duration: 750,
@@ -4966,7 +4964,7 @@
                 }
               }
               queries = queries.filter(query => query != '');
-              const text = 'df.query(' + queries.join(' and ') + ')';
+              const text = 'df.query("' + queries.join(' and ') + '")';
               if (queries.length !== 0) {
                 const copyPromise = copyTextToClipboard(text);
                 copyPromise.then(function () {
@@ -5091,7 +5089,7 @@
       return ' (' + stringConstructor.join(' or ') + ') ';
     }
     function createQueryFromBounds(fieldName, lowerBound, upperBound) {
-      return ` (${fieldName}>=${lowerBound} and ${fieldName}<=${upperBound}) `;
+      return ` (${fieldName}>=${lowerBound.toFixed(2)} and ${fieldName}<=${upperBound.toFixed(2)}) `;
     }
     function encodeValueAsString(datumValue) {
       if (vegaImport.isString(datumValue)) {

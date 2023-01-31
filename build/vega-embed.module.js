@@ -3235,7 +3235,7 @@ function _embed3() {
                       opacity: '1',
                       transform: 'translateY(-10px)'
                     }, {
-                      opacity: '0.5',
+                      opacity: '0',
                       transform: 'translateY(0px)'
                     }], {
                       duration: 750,
@@ -3248,7 +3248,7 @@ function _embed3() {
                   copyAlert = document.createElement('div');
                   copyAlert.id = COPY_ALERT_ID;
                   copyAlert.innerHTML = 'Copied!';
-                  copyAlert.style.opacity = '0.5';
+                  copyAlert.style.opacity = '0';
                   copyAlert.style.fontFamily = 'Lato, Helvetica, sans-serif';
                   copyAlert.style.color = 'white';
                   copyAlert.style.margin = '0 auto';
@@ -3262,7 +3262,6 @@ function _embed3() {
                     event.preventDefault();
                     event.stopPropagation();
                   });
-                  //if (actionsPandas !== false) {
                   pandasLink = document.createElement('a');
                   pandasLink.text = i18n.QUERY_ACTION;
                   pandasLink.href = '#';
@@ -3293,7 +3292,7 @@ function _embed3() {
                       _iterator5.f();
                     }
                     queries = queries.filter(query => query != '');
-                    var text = 'df.query(' + queries.join(' and ') + ')';
+                    var text = 'df.query("' + queries.join(' and ') + '")';
                     if (queries.length !== 0) {
                       var copyPromise = copyTextToClipboard(text);
                       copyPromise.then(function () {
@@ -3458,7 +3457,7 @@ function createQueryFromCategoricalInterval(field, data) {
   return ' (' + stringConstructor.join(' or ') + ') ';
 }
 function createQueryFromBounds(fieldName, lowerBound, upperBound) {
-  return " (".concat(fieldName, ">=").concat(lowerBound, " and ").concat(fieldName, "<=").concat(upperBound, ") ");
+  return " (".concat(fieldName, ">=").concat(lowerBound.toFixed(2), " and ").concat(fieldName, "<=").concat(upperBound.toFixed(2), ") ");
 }
 function encodeValueAsString(datumValue) {
   if (isString(datumValue)) {
