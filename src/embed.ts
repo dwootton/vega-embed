@@ -556,7 +556,7 @@ async function _embed(
         const copyAlert = document.createElement('div');
         copyAlert.id = COPY_ALERT_ID;
         copyAlert.innerHTML = 'Copied!';
-        copyAlert.style.opacity = '0.5';
+        copyAlert.style.opacity = '0';
         copyAlert.style.fontFamily = 'Lato, Helvetica, sans-serif';
         copyAlert.style.color = 'white';
         copyAlert.style.margin = '0 auto';
@@ -573,11 +573,6 @@ async function _embed(
           event.stopPropagation();
         });
 
-        //.addEventListener('mousedown', handleMouseEvent); // associate the function above with the click event
-
-        const actionsPandas = true;
-        // add 'Open in Vega Editor' action
-        //if (actionsPandas !== false) {
         const pandasLink = document.createElement('a');
 
         pandasLink.text = i18n.QUERY_ACTION;
@@ -586,7 +581,7 @@ async function _embed(
           document.getElementById(COPY_ALERT_ID)?.animate(
             [
               {opacity: '1', transform: 'translateY(-10px)'},
-              {opacity: '0.5', transform: 'translateY(0px)'}
+              {opacity: '0', transform: 'translateY(0px)'}
             ],
             {
               duration: 750,
@@ -615,7 +610,7 @@ async function _embed(
 
           queries = queries.filter((query) => query != '');
 
-          const text = 'df.query(' + queries.join(' and ') + ')';
+          const text = 'df.query("' + queries.join(' and ') + '")';
           if (queries.length !== 0) {
             const copyPromise = copyTextToClipboard(text);
             copyPromise.then(
@@ -762,7 +757,7 @@ function createQueryFromCategoricalInterval(field: string, data: string[]) {
 }
 
 function createQueryFromBounds(fieldName: string, lowerBound: number, upperBound: number) {
-  return ` (${fieldName}>=${lowerBound} and ${fieldName}<=${upperBound}) `;
+  return ` (${fieldName}>=${lowerBound.toFixed(2)} and ${fieldName}<=${upperBound.toFixed(2)}) `;
 }
 
 function encodeValueAsString(datumValue: any) {
