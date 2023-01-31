@@ -705,7 +705,7 @@ df.groupby("ALX_GROUP").mean(numeric_only=True)
 
 function createQueryFromSelectionName(selectionName: string, view: View) {
   const signal = view.signal(selectionName);
-
+  console.log('post signal', signal);
   if ('vlPoint' in signal) {
     const selection = signal['vlPoint'];
 
@@ -713,6 +713,7 @@ function createQueryFromSelectionName(selectionName: string, view: View) {
 
     const sourceName = 'source_0';
     const dataName = 'data_0';
+    console.log('post signal', vgsidToSelect);
 
     const source = view.data(sourceName);
 
@@ -722,8 +723,11 @@ function createQueryFromSelectionName(selectionName: string, view: View) {
       source,
       data.filter((datum) => vgsidToSelect.includes(datum._vgsid_))
     );
+    console.log('post selectedItems', selectedItems);
 
     const query = createQueryFromData(selectedItems);
+    console.log('post query', vgsidToSelect);
+
     return query;
 
     // after selecting an item create filter
@@ -736,6 +740,7 @@ function createQueryFromSelectionName(selectionName: string, view: View) {
 
     // top level of _store object corresponds with the # of the selection (ie multi brush), this should typically be of length 1
     const selectionInstances = view.data(selectionName + '_store');
+    console.log(' selectedInstances', selectionInstances);
 
     for (const selection of selectionInstances) {
       // if field is
@@ -743,6 +748,8 @@ function createQueryFromSelectionName(selectionName: string, view: View) {
         const field = selection.fields[fieldIndex];
         if (field.type == 'E') {
           // ordinal and nominal interval selections
+          console.log(' 751 selectedInstances', selectionInstances);
+
           selectionInstances.map((selectionInstance) => {
             const fieldName = field.field;
             // todo, make this
@@ -762,9 +769,11 @@ function createQueryFromSelectionName(selectionName: string, view: View) {
 
             queries.push(createQueryFromBounds(fieldName, lowerBound, upperBound));
           });
+          console.log(' 772', selectionInstances);
         }
       }
     }
+    console.log(' about to join', queries);
 
     return queries.join(' and ');
   }

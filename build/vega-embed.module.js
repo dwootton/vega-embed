@@ -3381,15 +3381,19 @@ function createGroupFromSelectionName(selectionName, view) {
 }
 function createQueryFromSelectionName(selectionName, view) {
   var signal = view.signal(selectionName);
+  console.log('post signal', signal);
   if ('vlPoint' in signal) {
     var selection = signal['vlPoint'];
     var vgsidToSelect = selection['or'].map(item => item._vgsid_);
     var sourceName = 'source_0';
     var dataName = 'data_0';
+    console.log('post signal', vgsidToSelect);
     var source = view.data(sourceName);
     var data = view.data(dataName);
     var selectedItems = cleanVegaProperties(source, data.filter(datum => vgsidToSelect.includes(datum._vgsid_)));
+    console.log('post selectedItems', selectedItems);
     var query = createQueryFromData(selectedItems);
+    console.log('post query', vgsidToSelect);
     return query;
 
     // after selecting an item create filter
@@ -3403,6 +3407,7 @@ function createQueryFromSelectionName(selectionName, view) {
 
       // top level of _store object corresponds with the # of the selection (ie multi brush), this should typically be of length 1
       var selectionInstances = view.data(selectionName + '_store');
+      console.log(' selectedInstances', selectionInstances);
       var _iterator2 = _createForOfIteratorHelper(selectionInstances),
         _step2;
       try {
@@ -3412,6 +3417,7 @@ function createQueryFromSelectionName(selectionName, view) {
             var field = _selection.fields[fieldIndex];
             if (field.type == 'E') {
               // ordinal and nominal interval selections
+              console.log(' 751 selectedInstances', selectionInstances);
               selectionInstances.map(selectionInstance => {
                 var fieldName = field.field;
                 // todo, make this
@@ -3431,6 +3437,7 @@ function createQueryFromSelectionName(selectionName, view) {
                   upperBound = _bounds[1];
                 queries.push(createQueryFromBounds(fieldName, lowerBound, upperBound));
               });
+              console.log(' 772', selectionInstances);
             }
           };
           // if field is
@@ -3443,6 +3450,7 @@ function createQueryFromSelectionName(selectionName, view) {
       } finally {
         _iterator2.f();
       }
+      console.log(' about to join', queries);
       return {
         v: queries.join(' and ')
       };
