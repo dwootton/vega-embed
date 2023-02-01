@@ -2705,7 +2705,7 @@ var PREPROCESSOR = {
 };
 var SVG_CIRCLES = "\n<svg viewBox=\"0 0 16 16\" fill=\"currentColor\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <circle r=\"2\" cy=\"8\" cx=\"2\"></circle>\n  <circle r=\"2\" cy=\"8\" cx=\"8\"></circle>\n  <circle r=\"2\" cy=\"8\" cx=\"14\"></circle>\n</svg>";
 var CHART_WRAPPER_CLASS = 'chart-wrapper';
-var COPY_ALERT_ID = 'copy-alert';
+var COPY_ALERT_ID = 'copy-alert' + Math.random().toString(36).slice(-5);
 function isTooltipHandler(h) {
   return typeof h === 'function';
 }
@@ -3244,6 +3244,7 @@ function _embed3() {
                   };
                   // add
                   // if clicked on and haven't clicked on anything else
+                  console.log('adding copy!');
                   // if a copy event fires and the container is clicked, copy the selection
                   copyAlert = document.createElement('div');
                   copyAlert.id = COPY_ALERT_ID;
@@ -3272,7 +3273,7 @@ function _embed3() {
                         recurse: true
                       }),
                       data = _view$getState.data;
-
+                    console.log('copying', data);
                     // as selections store their data in a dataset with the suffix "*_store", find those selections
                     var selectionNames = Object.keys(data).filter(key => key.includes('_store')).map(key => key.replace('_store', ''));
                     var queries = {
@@ -3307,7 +3308,7 @@ function _embed3() {
                     } finally {
                       _iterator6.f();
                     }
-                    var filter_text = "df.query(\"' + queries['filter'].join(' and ') + '\")\n          ";
+                    var filter_text = "df.query(\"".concat(queries['filter'].join(' and '), "\")\n          ");
                     var group_text = queries['group'].join("\n          ");
                     var text = filter_text + group_text;
                     console.log('your text', text);

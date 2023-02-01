@@ -4543,7 +4543,7 @@
   <circle r="2" cy="8" cx="14"></circle>
 </svg>`;
     const CHART_WRAPPER_CLASS = 'chart-wrapper';
-    const COPY_ALERT_ID = 'copy-alert';
+    const COPY_ALERT_ID = 'copy-alert' + Math.random().toString(36).slice(-5);
     function isTooltipHandler(h) {
       return typeof h === 'function';
     }
@@ -4910,7 +4910,7 @@
           if (actions !== true) {
             // add
             // if clicked on and haven't clicked on anything else
-
+            console.log('adding copy!');
             // if a copy event fires and the container is clicked, copy the selection
             const copyAlert = document.createElement('div');
             copyAlert.id = COPY_ALERT_ID;
@@ -4953,7 +4953,7 @@
                 signals: vega.falsy,
                 recurse: true
               });
-
+              console.log('copying', data);
               // as selections store their data in a dataset with the suffix "*_store", find those selections
               const selectionNames = Object.keys(data).filter(key => key.includes('_store')).map(key => key.replace('_store', ''));
               const queries = {
@@ -4979,7 +4979,7 @@
                   }
                 }
               }
-              const filter_text = `df.query("' + queries['filter'].join(' and ') + '")
+              const filter_text = `df.query("${queries['filter'].join(' and ')}")
           `;
               const group_text = queries['group'].join(`
           `);
