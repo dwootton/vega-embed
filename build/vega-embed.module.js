@@ -3307,7 +3307,7 @@ function _embed3() {
                     } finally {
                       _iterator6.f();
                     }
-                    var filter_text = queries['filter'].join(' and ');
+                    var filter_text = "df.query(\"' + queries['filter'].join(' and ') + '\")\n          ";
                     var group_text = queries['group'].join("\n          ");
                     var text = filter_text + group_text;
                     console.log('your text', text);

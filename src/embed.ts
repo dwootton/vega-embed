@@ -626,7 +626,8 @@ async function _embed(
             }
           }
 
-          const filter_text = queries['filter'].join(' and ');
+          const filter_text = `df.query("' + queries['filter'].join(' and ') + '")
+          `;
           const group_text = queries['group'].join(`
           `);
 
