@@ -123,7 +123,6 @@ const SVG_CIRCLES = `
 </svg>`;
 
 const CHART_WRAPPER_CLASS = 'chart-wrapper';
-const COPY_ALERT_ID = 'copy-alert' + Math.random().toString(36).slice(-5);
 export type VisualizationSpec = VlSpec | VgSpec;
 
 export interface Result {
@@ -554,6 +553,8 @@ async function _embed(
         console.log('adding copy!');
         // if a copy event fires and the container is clicked, copy the selection
         const copyAlert = document.createElement('div');
+        const COPY_ALERT_ID = 'copy-alert' + Math.random().toString(36).slice(-5);
+
         copyAlert.id = COPY_ALERT_ID;
         copyAlert.innerHTML = 'Copied!';
         copyAlert.style.opacity = '0';
@@ -633,7 +634,6 @@ async function _embed(
           `);
 
           const text = filter_text + group_text;
-          console.log('your text', text);
           if (text.length > 0) {
             const copyPromise = copyTextToClipboard(text);
             copyPromise.then(

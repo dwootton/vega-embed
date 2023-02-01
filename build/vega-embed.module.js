@@ -2705,7 +2705,6 @@ var PREPROCESSOR = {
 };
 var SVG_CIRCLES = "\n<svg viewBox=\"0 0 16 16\" fill=\"currentColor\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <circle r=\"2\" cy=\"8\" cx=\"2\"></circle>\n  <circle r=\"2\" cy=\"8\" cx=\"8\"></circle>\n  <circle r=\"2\" cy=\"8\" cx=\"14\"></circle>\n</svg>";
 var CHART_WRAPPER_CLASS = 'chart-wrapper';
-var COPY_ALERT_ID = 'copy-alert' + Math.random().toString(36).slice(-5);
 function isTooltipHandler(h) {
   return typeof h === 'function';
 }
@@ -2970,6 +2969,7 @@ function _embed3() {
       editorLink,
       animateCopy,
       copyAlert,
+      COPY_ALERT_ID,
       pandasLink,
       copyText,
       finalize,
@@ -3247,6 +3247,7 @@ function _embed3() {
                   console.log('adding copy!');
                   // if a copy event fires and the container is clicked, copy the selection
                   copyAlert = document.createElement('div');
+                  COPY_ALERT_ID = 'copy-alert' + Math.random().toString(36).slice(-5);
                   copyAlert.id = COPY_ALERT_ID;
                   copyAlert.innerHTML = 'Copied!';
                   copyAlert.style.opacity = '0';
@@ -3311,7 +3312,6 @@ function _embed3() {
                     var filter_text = "df.query(\"".concat(queries['filter'].join(' and '), "\")\n          ");
                     var group_text = queries['group'].join("\n          ");
                     var text = filter_text + group_text;
-                    console.log('your text', text);
                     if (text.length > 0) {
                       var copyPromise = copyTextToClipboard(text);
                       copyPromise.then(function () {
