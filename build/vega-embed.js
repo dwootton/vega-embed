@@ -4504,6 +4504,7 @@
     if (vegaLite === undefined && w !== null && w !== void 0 && (_w$vl = w.vl) !== null && _w$vl !== void 0 && _w$vl.compile) {
       vegaLite = w.vl;
     }
+    console.log('in new vega-embed');
     const DEFAULT_ACTIONS = {
       export: {
         svg: true,
@@ -4543,7 +4544,6 @@
   <circle r="2" cy="8" cx="14"></circle>
 </svg>`;
     const CHART_WRAPPER_CLASS = 'chart-wrapper';
-    const COPY_ALERT_ID = 'copy-alert' + Math.random().toString(36).slice(-5);
     function isTooltipHandler(h) {
       return typeof h === 'function';
     }
@@ -4627,7 +4627,6 @@
       let opts = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
       let parsedSpec;
       let loader;
-      console.log('embedding dywootto!');
       if (vegaImport.isString(spec)) {
         loader = createLoader(opts.loader);
         parsedSpec = JSON.parse(await loader.load(spec));
@@ -4910,17 +4909,22 @@
           if (actions !== true) {
             // add
             // if clicked on and haven't clicked on anything else
-            console.log('adding copy!');
             // if a copy event fires and the container is clicked, copy the selection
             const copyAlert = document.createElement('div');
+            const COPY_ALERT_ID = 'copy-alert' + Math.random().toString(36).slice(-5);
+            copyAlert.classList.add('alert');
             copyAlert.id = COPY_ALERT_ID;
             copyAlert.innerHTML = 'Copied!';
             copyAlert.style.opacity = '0';
             copyAlert.style.fontFamily = 'Lato, Helvetica, sans-serif';
-            copyAlert.style.color = 'white';
-            copyAlert.style.margin = '0 auto';
-            copyAlert.style.background = 'green';
-            copyAlert.style.width = 'fit-content';
+            copyAlert.style.color = 'black';
+            copyAlert.style.margin = '4px auto';
+            copyAlert.style.padding = '8px';
+            copyAlert.style.background = '#a8f0c6';
+            copyAlert.style.width = '100px';
+            copyAlert.style.borderLeft = '5px solid darkgreen';
+            copyAlert.style.borderRadius = '5px';
+            copyAlert.style.textAlign = 'center';
             element.appendChild(copyAlert);
             view.addEventListener('mousedown', function (event) {
               window.currentClicked = () => {
@@ -4953,7 +4957,6 @@
                 signals: vega.falsy,
                 recurse: true
               });
-              console.log('copying', data);
               // as selections store their data in a dataset with the suffix "*_store", find those selections
               const selectionNames = Object.keys(data).filter(key => key.includes('_store')).map(key => key.replace('_store', ''));
               const queries = {
@@ -4961,12 +4964,10 @@
                 filter: []
               };
               for (const selection of selectionNames) {
-                console.log('');
                 if (!selection.includes('ALX')) continue;
                 const signal = view.signal(selection);
                 if (signal) {
                   if (selection.includes('GROUP')) {
-                    console.log('about to group', signal);
                     const group = createGroupFromSelectionName(selection, view);
                     if (group !== '') {
                       queries.filter.push(group);
@@ -4984,7 +4985,6 @@
               const group_text = queries['group'].join(`
           `);
               const text = filter_text + group_text;
-              console.log('your text', text);
               if (text.length > 0) {
                 const copyPromise = copyTextToClipboard(text);
                 copyPromise.then(function () {
@@ -5048,21 +5048,23 @@ df.groupby("ALX_GROUP").mean(numeric_only=True)
     }
     function createQueryFromSelectionName(selectionName, view) {
       const signal = view.signal(selectionName);
-      console.log('post signal', signal);
       if ('vlPoint' in signal) {
         const selection = signal['vlPoint'];
-        const vgsidToSelect = selection['or'].map(item => item._vgsid_);
+        const vgsidToSelect = selection['or'].map(item => item._vgsid_).filter(item => item);
         const sourceName = 'source_0';
         const dataName = 'data_0';
-        console.log('post signal', vgsidToSelect);
+        let query = '';
         const source = view.data(sourceName);
-        const data = view.data(dataName);
-        const selectedItems = cleanVegaProperties(source, data.filter(datum => vgsidToSelect.includes(datum._vgsid_)));
-        console.log('post selectedItems', selectedItems);
-        const query = createQueryFromData(selectedItems);
-        console.log('post query', vgsidToSelect);
+        if (vgsidToSelect.length > 0) {
+          // if selection uses vgsids, select corresponding data points
+          const data = view.data(dataName);
+          const selectedItems = cleanVegaProperties(source, data.filter(datum => vgsidToSelect.includes(datum._vgsid_)));
+          query = createQueryFromData(selectedItems);
+        } else {
+          // else access data query directly
+          query = createQueryFromData(selection['or']);
+        }
         return query;
-
         // after selecting an item create filter
       } else {
         // interval selection
@@ -5073,14 +5075,13 @@ df.groupby("ALX_GROUP").mean(numeric_only=True)
 
         // top level of _store object corresponds with the # of the selection (ie multi brush), this should typically be of length 1
         const selectionInstances = view.data(selectionName + '_store');
-        console.log(' selectedInstances', selectionInstances);
         for (const selection of selectionInstances) {
           // if field is
           for (const fieldIndex in selection.fields) {
             const field = selection.fields[fieldIndex];
             if (field.type == 'E') {
               // ordinal and nominal interval selections
-              console.log(' 751 selectedInstances', selectionInstances);
+
               selectionInstances.map(selectionInstance => {
                 const fieldName = field.field;
                 // todo, make this

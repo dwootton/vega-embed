@@ -12,6 +12,7 @@
 
   <body>
     <div id="vis"></div>
+    <div id="vis2"></div>
     <script>
       async function run() {
         //// http://[::]:8081/test-vl-interval-select-ordinal.html#
@@ -153,13 +154,11 @@
             url: "https://gist.githubusercontent.com/dwootton/faf7769597f3304140afc722839e2771/raw/3bfdac3a9b4340061f505b7987ab6321fe449f50/cars.csv"
           }
         };
-
         const result = await vegaEmbed("#vis", spec, {
           config: config,
           tooltip: { theme: "dark" }
         });
-
-        const result2 = await vegaEmbed("#vis", spec, {
+        const result2 = await vegaEmbed("#vis2", spec, {
           config: config,
           tooltip: { theme: "dark" }
         });

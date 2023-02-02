@@ -2671,6 +2671,7 @@ var w = typeof window !== 'undefined' ? window : undefined;
 if (_vegaLite === undefined && w !== null && w !== void 0 && (_w$vl = w.vl) !== null && _w$vl !== void 0 && _w$vl.compile) {
   _vegaLite = w.vl;
 }
+console.log('in new vega-embed');
 var DEFAULT_ACTIONS = {
   export: {
     svg: true,
@@ -2804,44 +2805,43 @@ function _embed2() {
         switch (_context.prev = _context.next) {
           case 0:
             opts = _args.length > 2 && _args[2] !== undefined ? _args[2] : {};
-            console.log('embedding dywootto!');
             if (!isString(spec)) {
-              _context.next = 11;
+              _context.next = 10;
               break;
             }
             loader = createLoader(opts.loader);
             _context.t0 = JSON;
-            _context.next = 7;
+            _context.next = 6;
             return loader.load(spec);
-          case 7:
+          case 6:
             _context.t1 = _context.sent;
             parsedSpec = _context.t0.parse.call(_context.t0, _context.t1);
-            _context.next = 12;
+            _context.next = 11;
             break;
-          case 11:
+          case 10:
             parsedSpec = spec;
-          case 12:
+          case 11:
             loadedEmbedOptions = embedOptionsFromUsermeta(parsedSpec);
             usermetaLoader = loadedEmbedOptions.loader; // either create the loader for the first time or create a new loader if the spec has new loader options
             if (!loader || usermetaLoader) {
               loader = createLoader((_opts$loader = opts.loader) !== null && _opts$loader !== void 0 ? _opts$loader : usermetaLoader);
             }
-            _context.next = 17;
+            _context.next = 16;
             return loadOpts(loadedEmbedOptions, loader);
-          case 17:
+          case 16:
             usermetaOpts = _context.sent;
-            _context.next = 20;
+            _context.next = 19;
             return loadOpts(opts, loader);
-          case 20:
+          case 19:
             parsedOpts = _context.sent;
             mergedOpts = _objectSpread(_objectSpread({}, mergeDeep(parsedOpts, usermetaOpts)), {}, {
               config: mergeConfig((_parsedOpts$config = parsedOpts.config) !== null && _parsedOpts$config !== void 0 ? _parsedOpts$config : {}, (_usermetaOpts$config = usermetaOpts.config) !== null && _usermetaOpts$config !== void 0 ? _usermetaOpts$config : {})
             });
-            _context.next = 24;
+            _context.next = 23;
             return _embed(el, parsedSpec, mergedOpts, loader);
-          case 24:
+          case 23:
             return _context.abrupt("return", _context.sent);
-          case 25:
+          case 24:
           case "end":
             return _context.stop();
         }
@@ -3244,18 +3244,22 @@ function _embed3() {
                   };
                   // add
                   // if clicked on and haven't clicked on anything else
-                  console.log('adding copy!');
                   // if a copy event fires and the container is clicked, copy the selection
                   copyAlert = document.createElement('div');
                   COPY_ALERT_ID = 'copy-alert' + Math.random().toString(36).slice(-5);
+                  copyAlert.classList.add('alert');
                   copyAlert.id = COPY_ALERT_ID;
                   copyAlert.innerHTML = 'Copied!';
                   copyAlert.style.opacity = '0';
                   copyAlert.style.fontFamily = 'Lato, Helvetica, sans-serif';
-                  copyAlert.style.color = 'white';
-                  copyAlert.style.margin = '0 auto';
-                  copyAlert.style.background = 'green';
-                  copyAlert.style.width = 'fit-content';
+                  copyAlert.style.color = 'black';
+                  copyAlert.style.margin = '4px auto';
+                  copyAlert.style.padding = '8px';
+                  copyAlert.style.background = '#a8f0c6';
+                  copyAlert.style.width = '100px';
+                  copyAlert.style.borderLeft = '5px solid darkgreen';
+                  copyAlert.style.borderRadius = '5px';
+                  copyAlert.style.textAlign = 'center';
                   element.appendChild(copyAlert);
                   view.addEventListener('mousedown', function (event) {
                     window.currentClicked = () => {
@@ -3274,7 +3278,6 @@ function _embed3() {
                         recurse: true
                       }),
                       data = _view$getState.data;
-                    console.log('copying', data);
                     // as selections store their data in a dataset with the suffix "*_store", find those selections
                     var selectionNames = Object.keys(data).filter(key => key.includes('_store')).map(key => key.replace('_store', ''));
                     var queries = {
@@ -3286,12 +3289,10 @@ function _embed3() {
                     try {
                       for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
                         var selection = _step6.value;
-                        console.log('');
                         if (!selection.includes('ALX')) continue;
                         var signal = view.signal(selection);
                         if (signal) {
                           if (selection.includes('GROUP')) {
-                            console.log('about to group', signal);
                             var group = createGroupFromSelectionName(selection, view);
                             if (group !== '') {
                               queries.filter.push(group);
@@ -3382,21 +3383,23 @@ function createGroupFromSelectionName(selectionName, view) {
 }
 function createQueryFromSelectionName(selectionName, view) {
   var signal = view.signal(selectionName);
-  console.log('post signal', signal);
   if ('vlPoint' in signal) {
     var selection = signal['vlPoint'];
-    var vgsidToSelect = selection['or'].map(item => item._vgsid_);
+    var vgsidToSelect = selection['or'].map(item => item._vgsid_).filter(item => item);
     var sourceName = 'source_0';
     var dataName = 'data_0';
-    console.log('post signal', vgsidToSelect);
+    var query = '';
     var source = view.data(sourceName);
-    var data = view.data(dataName);
-    var selectedItems = cleanVegaProperties(source, data.filter(datum => vgsidToSelect.includes(datum._vgsid_)));
-    console.log('post selectedItems', selectedItems);
-    var query = createQueryFromData(selectedItems);
-    console.log('post query', vgsidToSelect);
+    if (vgsidToSelect.length > 0) {
+      // if selection uses vgsids, select corresponding data points
+      var data = view.data(dataName);
+      var selectedItems = cleanVegaProperties(source, data.filter(datum => vgsidToSelect.includes(datum._vgsid_)));
+      query = createQueryFromData(selectedItems);
+    } else {
+      // else access data query directly
+      query = createQueryFromData(selection['or']);
+    }
     return query;
-
     // after selecting an item create filter
   } else {
     var _ret = function () {
@@ -3408,7 +3411,6 @@ function createQueryFromSelectionName(selectionName, view) {
 
       // top level of _store object corresponds with the # of the selection (ie multi brush), this should typically be of length 1
       var selectionInstances = view.data(selectionName + '_store');
-      console.log(' selectedInstances', selectionInstances);
       var _iterator2 = _createForOfIteratorHelper(selectionInstances),
         _step2;
       try {
@@ -3418,7 +3420,7 @@ function createQueryFromSelectionName(selectionName, view) {
             var field = _selection.fields[fieldIndex];
             if (field.type == 'E') {
               // ordinal and nominal interval selections
-              console.log(' 751 selectedInstances', selectionInstances);
+
               selectionInstances.map(selectionInstance => {
                 var fieldName = field.field;
                 // todo, make this
