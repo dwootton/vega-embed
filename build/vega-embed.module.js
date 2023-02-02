@@ -2697,6 +2697,7 @@ var VERSION = {
   vega: vega.version,
   'vega-lite': _vegaLite ? _vegaLite.version : 'not available'
 };
+console.log('2/2/ 11am');
 var PREPROCESSOR = {
   vega: vgSpec => vgSpec,
   'vega-lite': (vlSpec, config) => _vegaLite.compile(vlSpec, {

@@ -4530,6 +4530,7 @@
       vega: vega.version,
       'vega-lite': vegaLite ? vegaLite.version : 'not available'
     };
+    console.log('2/2/ 11am');
     const PREPROCESSOR = {
       vega: vgSpec => vgSpec,
       'vega-lite': (vlSpec, config) => vegaLite.compile(vlSpec, {

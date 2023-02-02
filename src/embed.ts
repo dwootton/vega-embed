@@ -109,7 +109,7 @@ const VERSION = {
   vega: vega.version,
   'vega-lite': vegaLite ? vegaLite.version : 'not available'
 };
-
+console.log('2/2/ 11am')
 const PREPROCESSOR: {[mode in Mode]: (spec: any, config?: Config) => VgSpec} = {
   vega: (vgSpec: VgSpec) => vgSpec,
   'vega-lite': (vlSpec, config) => vegaLite.compile(vlSpec as VlSpec, {config: config as VlConfig}).spec
