@@ -4504,7 +4504,6 @@
     if (vegaLite === undefined && w !== null && w !== void 0 && (_w$vl = w.vl) !== null && _w$vl !== void 0 && _w$vl.compile) {
       vegaLite = w.vl;
     }
-    console.log('in new vega-embed');
     const DEFAULT_ACTIONS = {
       export: {
         svg: true,
