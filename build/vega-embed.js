@@ -4941,18 +4941,18 @@
             pandasLink.text = i18n.QUERY_ACTION;
             pandasLink.href = '#';
             function animateCopy() {
-              var _document, _document$getElementB;
               console.log('before animate');
-              (_document = document) === null || _document === void 0 ? void 0 : (_document$getElementB = _document.getElementById(COPY_ALERT_ID)) === null || _document$getElementB === void 0 ? void 0 : _document$getElementB.animate([{
-                opacity: '1',
-                transform: 'translateY(-10px)'
-              }, {
-                opacity: '0',
-                transform: 'translateY(0px)'
-              }], {
-                duration: 750,
-                iterations: 1
-              });
+              console.log('hiding animate!');
+              /*document?.getElementById(COPY_ALERT_ID)?.animate(
+                [
+                  {opacity: '1', transform: 'translateY(-10px)'},
+                  {opacity: '0', transform: 'translateY(0px)'}
+                ],
+                {
+                  duration: 750,
+                  iterations: 1
+                }
+              );*/
               console.log('past animate');
             }
             const copyText = function () {
@@ -4999,6 +4999,7 @@
               console.log('text!', queries);
               if (text.length > 0) {
                 const copyPromise = copyTextToClipboard(text);
+                console.log('pastcopyPromise', copyPromise);
                 copyPromise.then(function () {
                   console.log('copy success!');
                   animateCopy();
@@ -5006,6 +5007,7 @@
                 }, function (err) {
                   console.error('Async: Could not copy text: ', err);
                 });
+                console.log('text', text, navigator.clipboard);
               }
 
               //e.preventDefault();

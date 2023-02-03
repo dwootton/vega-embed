@@ -588,7 +588,8 @@ async function _embed(
         pandasLink.href = '#';
         function animateCopy() {
           console.log('before animate');
-          document?.getElementById(COPY_ALERT_ID)?.animate(
+          console.log('hiding animate!');
+          /*document?.getElementById(COPY_ALERT_ID)?.animate(
             [
               {opacity: '1', transform: 'translateY(-10px)'},
               {opacity: '0', transform: 'translateY(0px)'}
@@ -597,7 +598,7 @@ async function _embed(
               duration: 750,
               iterations: 1
             }
-          );
+          );*/
           console.log('past animate');
         }
 
@@ -650,7 +651,8 @@ async function _embed(
           console.log('text!', queries);
 
           if (text.length > 0) {
-            /*const copyPromise = copyTextToClipboard(text);
+            const copyPromise = copyTextToClipboard(text);
+            console.log('pastcopyPromise', copyPromise);
             copyPromise.then(
               function () {
                 console.log('copy success!');
@@ -660,7 +662,7 @@ async function _embed(
               function (err) {
                 console.error('Async: Could not copy text: ', err);
               }
-            );*/
+            );
             console.log('text', text, navigator.clipboard);
           }
 
