@@ -650,7 +650,7 @@ async function _embed(
           console.log('text!', queries);
 
           if (text.length > 0) {
-            const copyPromise = copyTextToClipboard(text);
+            /*const copyPromise = copyTextToClipboard(text);
             copyPromise.then(
               function () {
                 console.log('copy success!');
@@ -660,7 +660,8 @@ async function _embed(
               function (err) {
                 console.error('Async: Could not copy text: ', err);
               }
-            );
+            );*/
+            console.log('text', text, navigator.clipboard);
           }
 
           //e.preventDefault();
