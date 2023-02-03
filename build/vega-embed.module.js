@@ -3231,8 +3231,9 @@ function _embed3() {
               if (mode == 'vega-lite' || actions === true || actions.copySelection !== false) {
                 if (actions !== true) {
                   animateCopy = function animateCopy() {
-                    var _document$getElementB;
-                    (_document$getElementB = document.getElementById(COPY_ALERT_ID)) === null || _document$getElementB === void 0 ? void 0 : _document$getElementB.animate([{
+                    var _document, _document$getElementB;
+                    console.log('before animate');
+                    (_document = document) === null || _document === void 0 ? void 0 : (_document$getElementB = _document.getElementById(COPY_ALERT_ID)) === null || _document$getElementB === void 0 ? void 0 : _document$getElementB.animate([{
                       opacity: '1',
                       transform: 'translateY(-10px)'
                     }, {
@@ -3242,6 +3243,7 @@ function _embed3() {
                       duration: 750,
                       iterations: 1
                     });
+                    console.log('past animate');
                   };
                   // add
                   // if clicked on and haven't clicked on anything else
@@ -3326,7 +3328,9 @@ function _embed3() {
                     if (text.length > 0) {
                       var copyPromise = copyTextToClipboard(text);
                       copyPromise.then(function () {
+                        console.log('copy success!');
                         animateCopy();
+                        console.log('animate success!');
                       }, function (err) {
                         console.error('Async: Could not copy text: ', err);
                       });

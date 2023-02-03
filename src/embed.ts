@@ -587,7 +587,8 @@ async function _embed(
         pandasLink.text = i18n.QUERY_ACTION;
         pandasLink.href = '#';
         function animateCopy() {
-          document.getElementById(COPY_ALERT_ID)?.animate(
+          console.log('before animate');
+          document?.getElementById(COPY_ALERT_ID)?.animate(
             [
               {opacity: '1', transform: 'translateY(-10px)'},
               {opacity: '0', transform: 'translateY(0px)'}
@@ -597,6 +598,7 @@ async function _embed(
               iterations: 1
             }
           );
+          console.log('past animate');
         }
 
         const copyText = function () {
@@ -651,7 +653,9 @@ async function _embed(
             const copyPromise = copyTextToClipboard(text);
             copyPromise.then(
               function () {
+                console.log('copy success!');
                 animateCopy();
+                console.log('animate success!');
               },
               function (err) {
                 console.error('Async: Could not copy text: ', err);
