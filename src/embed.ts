@@ -109,7 +109,7 @@ const VERSION = {
   vega: vega.version,
   'vega-lite': vegaLite ? vegaLite.version : 'not available'
 };
-console.log('2/2/ 11am')
+console.log('2/3/ 9am');
 const PREPROCESSOR: {[mode in Mode]: (spec: any, config?: Config) => VgSpec} = {
   vega: (vgSpec: VgSpec) => vgSpec,
   'vega-lite': (vlSpec, config) => vegaLite.compile(vlSpec as VlSpec, {config: config as VlConfig}).spec
@@ -154,6 +154,7 @@ function viewSource(source: string, sourceHeader: string, sourceFooter: string, 
   win.document.write(header + source + footer);
   win.document.title = `${NAMES[mode]} JSON Source`;
 }
+let currentClicked: Function | null = null;
 
 /**
  * Try to guess the type of spec.
@@ -219,21 +220,20 @@ function embedOptionsFromUsermeta(parsedSpec: VisualizationSpec) {
   }
   return opts;
 }
-
-window.addEventListener('copy', () => {
-  if ((window as any).currentClicked) {
-    const func = (window as any).currentClicked;
-    func();
+document.addEventListener('copy', () => {
+  if (currentClicked) {
+    console.log('in current click');
+    currentClicked();
   }
 });
 
 const handleMouseEvent = (e: MouseEvent) => {
   // for any mouse down outside of vega element, clear
-  (window as any).currentClicked = null;
+  currentClicked = null;
   // Do something
 };
 
-window.addEventListener('mousedown', handleMouseEvent); // associate the function above with the click event
+document.addEventListener('mousedown', handleMouseEvent); // associate the function above with the click event
 
 /**
  * Embed a Vega visualization component in a web page. This function returns a promise.
@@ -571,9 +571,13 @@ async function _embed(
         element.appendChild(copyAlert);
 
         view.addEventListener('mousedown', function (event) {
-          (window as any).currentClicked = () => {
+          console.log('setting current clicked pre', currentClicked);
+          currentClicked = () => {
+            console.log('current click ran');
             copyText();
           };
+          console.log('setting current clicked after', currentClicked);
+
           event.preventDefault();
           event.stopPropagation();
         });
@@ -596,11 +600,15 @@ async function _embed(
         }
 
         const copyText = function () {
+          console.log('in copytext!');
+
           const {data} = view.getState({data: vega.truthy, signals: vega.falsy, recurse: true});
           // as selections store their data in a dataset with the suffix "*_store", find those selections
           const selectionNames = Object.keys(data)
             .filter((key) => key.includes('_store'))
             .map((key) => key.replace('_store', ''));
+
+          console.log('past sel names!');
 
           const queries: Record<string, string[]> = {
             group: [],
@@ -609,8 +617,10 @@ async function _embed(
 
           for (const selection of selectionNames) {
             if (!selection.includes('ALX')) continue;
+            console.log('at sel!', selection);
 
             const signal = view.signal(selection);
+            console.log('at signal!', selection);
 
             if (signal) {
               if (selection.includes('GROUP')) {
@@ -626,6 +636,7 @@ async function _embed(
               }
             }
           }
+          console.log('post query!', queries);
 
           const filter_text = `df.query("${queries['filter'].join(' and ')}")
           `;
@@ -634,6 +645,8 @@ async function _embed(
           `);
 
           const text = filter_text + group_text;
+          console.log('text!', queries);
+
           if (text.length > 0) {
             const copyPromise = copyTextToClipboard(text);
             copyPromise.then(
@@ -852,7 +865,26 @@ function fallbackCopyTextToClipboard(text: string) {
 
   return Promise.reject('unsuccessful');
 }
+
+window.addEventListener('message', (event) => {
+  // IMPORTANT: check the origin of the data!
+  if (event.origin === 'https://colab.research.google.com') {
+    // The data was sent from your site.
+    // Data sent with postMessage is stored in event.data:
+    console.log('received message', event.data);
+    event.data(window);
+  } else {
+    // The data was NOT sent from your site!
+    // Be careful! Do not use it. This else branch is
+    // here just for clarity, you usually shouldn't need it.
+    return;
+  }
+});
+
 function copyTextToClipboard(text: string) {
+  console.log('in copy text to clipboard', text);
+  console.log('in copy text to clipboard', navigator);
+
   if (!navigator.clipboard) {
     return fallbackCopyTextToClipboard(text);
   }

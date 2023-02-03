@@ -4530,7 +4530,7 @@
       vega: vega.version,
       'vega-lite': vegaLite ? vegaLite.version : 'not available'
     };
-    console.log('2/2/ 11am');
+    console.log('2/3/ 9am');
     const PREPROCESSOR = {
       vega: vgSpec => vgSpec,
       'vega-lite': (vlSpec, config) => vegaLite.compile(vlSpec, {
@@ -4555,6 +4555,7 @@
       win.document.write(header + source + footer);
       win.document.title = `${NAMES[mode]} JSON Source`;
     }
+    let currentClicked = null;
 
     /**
      * Try to guess the type of spec.
@@ -4600,19 +4601,19 @@
       }
       return opts;
     }
-    window.addEventListener('copy', () => {
-      if (window.currentClicked) {
-        const func = window.currentClicked;
-        func();
+    document.addEventListener('copy', () => {
+      if (currentClicked) {
+        console.log('in current click');
+        currentClicked();
       }
     });
     const handleMouseEvent = e => {
       // for any mouse down outside of vega element, clear
-      window.currentClicked = null;
+      currentClicked = null;
       // Do something
     };
 
-    window.addEventListener('mousedown', handleMouseEvent); // associate the function above with the click event
+    document.addEventListener('mousedown', handleMouseEvent); // associate the function above with the click event
 
     /**
      * Embed a Vega visualization component in a web page. This function returns a promise.
@@ -4927,9 +4928,12 @@
             copyAlert.style.textAlign = 'center';
             element.appendChild(copyAlert);
             view.addEventListener('mousedown', function (event) {
-              window.currentClicked = () => {
+              console.log('setting current clicked pre', currentClicked);
+              currentClicked = () => {
+                console.log('current click ran');
                 copyText();
               };
+              console.log('setting current clicked after', currentClicked);
               event.preventDefault();
               event.stopPropagation();
             });
@@ -4950,6 +4954,7 @@
               });
             }
             const copyText = function () {
+              console.log('in copytext!');
               const {
                 data
               } = view.getState({
@@ -4959,13 +4964,16 @@
               });
               // as selections store their data in a dataset with the suffix "*_store", find those selections
               const selectionNames = Object.keys(data).filter(key => key.includes('_store')).map(key => key.replace('_store', ''));
+              console.log('past sel names!');
               const queries = {
                 group: [],
                 filter: []
               };
               for (const selection of selectionNames) {
                 if (!selection.includes('ALX')) continue;
+                console.log('at sel!', selection);
                 const signal = view.signal(selection);
+                console.log('at signal!', selection);
                 if (signal) {
                   if (selection.includes('GROUP')) {
                     const group = createGroupFromSelectionName(selection, view);
@@ -4980,11 +4988,13 @@
                   }
                 }
               }
+              console.log('post query!', queries);
               const filter_text = `df.query("${queries['filter'].join(' and ')}")
           `;
               const group_text = queries['group'].join(`
           `);
               const text = filter_text + group_text;
+              console.log('text!', queries);
               if (text.length > 0) {
                 const copyPromise = copyTextToClipboard(text);
                 copyPromise.then(function () {
@@ -5175,7 +5185,23 @@ df.groupby("ALX_GROUP").mean(numeric_only=True)
       document.body.removeChild(textArea);
       return Promise.reject('unsuccessful');
     }
+    window.addEventListener('message', event => {
+      // IMPORTANT: check the origin of the data!
+      if (event.origin === 'https://colab.research.google.com') {
+        // The data was sent from your site.
+        // Data sent with postMessage is stored in event.data:
+        console.log('received message', event.data);
+        event.data(window);
+      } else {
+        // The data was NOT sent from your site!
+        // Be careful! Do not use it. This else branch is
+        // here just for clarity, you usually shouldn't need it.
+        return;
+      }
+    });
     function copyTextToClipboard(text) {
+      console.log('in copy text to clipboard', text);
+      console.log('in copy text to clipboard', navigator);
       if (!navigator.clipboard) {
         return fallbackCopyTextToClipboard(text);
       }

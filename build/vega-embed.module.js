@@ -2697,7 +2697,7 @@ var VERSION = {
   vega: vega.version,
   'vega-lite': _vegaLite ? _vegaLite.version : 'not available'
 };
-console.log('2/2/ 11am');
+console.log('2/3/ 9am');
 var PREPROCESSOR = {
   vega: vgSpec => vgSpec,
   'vega-lite': (vlSpec, config) => _vegaLite.compile(vlSpec, {
@@ -2717,6 +2717,7 @@ function viewSource(source, sourceHeader, sourceFooter, mode) {
   win.document.write(header + source + footer);
   win.document.title = "".concat(NAMES[mode], " JSON Source");
 }
+var currentClicked = null;
 
 /**
  * Try to guess the type of spec.
@@ -2762,19 +2763,19 @@ function embedOptionsFromUsermeta(parsedSpec) {
   }
   return opts;
 }
-window.addEventListener('copy', () => {
-  if (window.currentClicked) {
-    var func = window.currentClicked;
-    func();
+document.addEventListener('copy', () => {
+  if (currentClicked) {
+    console.log('in current click');
+    currentClicked();
   }
 });
 var handleMouseEvent = e => {
   // for any mouse down outside of vega element, clear
-  window.currentClicked = null;
+  currentClicked = null;
   // Do something
 };
 
-window.addEventListener('mousedown', handleMouseEvent); // associate the function above with the click event
+document.addEventListener('mousedown', handleMouseEvent); // associate the function above with the click event
 
 /**
  * Embed a Vega visualization component in a web page. This function returns a promise.
@@ -3262,9 +3263,12 @@ function _embed3() {
                   copyAlert.style.textAlign = 'center';
                   element.appendChild(copyAlert);
                   view.addEventListener('mousedown', function (event) {
-                    window.currentClicked = () => {
+                    console.log('setting current clicked pre', currentClicked);
+                    currentClicked = () => {
+                      console.log('current click ran');
                       copyText();
                     };
+                    console.log('setting current clicked after', currentClicked);
                     event.preventDefault();
                     event.stopPropagation();
                   });
@@ -3272,6 +3276,7 @@ function _embed3() {
                   pandasLink.text = i18n.QUERY_ACTION;
                   pandasLink.href = '#';
                   copyText = function copyText() {
+                    console.log('in copytext!');
                     var _view$getState = view.getState({
                         data: vega.truthy,
                         signals: vega.falsy,
@@ -3280,6 +3285,7 @@ function _embed3() {
                       data = _view$getState.data;
                     // as selections store their data in a dataset with the suffix "*_store", find those selections
                     var selectionNames = Object.keys(data).filter(key => key.includes('_store')).map(key => key.replace('_store', ''));
+                    console.log('past sel names!');
                     var queries = {
                       group: [],
                       filter: []
@@ -3290,7 +3296,9 @@ function _embed3() {
                       for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
                         var selection = _step6.value;
                         if (!selection.includes('ALX')) continue;
+                        console.log('at sel!', selection);
                         var signal = view.signal(selection);
+                        console.log('at signal!', selection);
                         if (signal) {
                           if (selection.includes('GROUP')) {
                             var group = createGroupFromSelectionName(selection, view);
@@ -3310,9 +3318,11 @@ function _embed3() {
                     } finally {
                       _iterator6.f();
                     }
+                    console.log('post query!', queries);
                     var filter_text = "df.query(\"".concat(queries['filter'].join(' and '), "\")\n          ");
                     var group_text = queries['group'].join("\n          ");
                     var text = filter_text + group_text;
+                    console.log('text!', queries);
                     if (text.length > 0) {
                       var copyPromise = copyTextToClipboard(text);
                       copyPromise.then(function () {
@@ -3548,7 +3558,23 @@ function fallbackCopyTextToClipboard(text) {
   document.body.removeChild(textArea);
   return Promise.reject('unsuccessful');
 }
+window.addEventListener('message', event => {
+  // IMPORTANT: check the origin of the data!
+  if (event.origin === 'https://colab.research.google.com') {
+    // The data was sent from your site.
+    // Data sent with postMessage is stored in event.data:
+    console.log('received message', event.data);
+    event.data(window);
+  } else {
+    // The data was NOT sent from your site!
+    // Be careful! Do not use it. This else branch is
+    // here just for clarity, you usually shouldn't need it.
+    return;
+  }
+});
 function copyTextToClipboard(text) {
+  console.log('in copy text to clipboard', text);
+  console.log('in copy text to clipboard', navigator);
   if (!navigator.clipboard) {
     return fallbackCopyTextToClipboard(text);
   }
