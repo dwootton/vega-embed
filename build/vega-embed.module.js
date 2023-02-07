@@ -2763,10 +2763,32 @@ function embedOptionsFromUsermeta(parsedSpec) {
   }
   return opts;
 }
-document.addEventListener('copy', () => {
+var KEYBOARD_ACTIONS = {
+  PASTE: 'paste',
+  COPY: 'copy'
+};
+document.addEventListener('copy', event => {
   if (currentClicked) {
-    console.log('in current click');
-    currentClicked();
+    currentClicked(KEYBOARD_ACTIONS.COPY, event);
+  }
+});
+document.addEventListener('paste', event => {
+  if (currentClicked) {
+    var _event$clipboardData, _event$clipboardData2;
+    /*event.clipboardData?.types
+    const items =  navigator.clipboard.read().then(items=>{
+      const item = items[0]
+       if (item.types.includes("web text/custom")) {
+        // prefer this web app's custom markup if available
+        // process the custom markup...
+      }
+     })*/
+
+    // store pastable text here
+    console.log('pasted new ', event === null || event === void 0 ? void 0 : (_event$clipboardData = event.clipboardData) === null || _event$clipboardData === void 0 ? void 0 : _event$clipboardData.getData('text/plain'));
+    // store object here
+    console.log('pasted web ', event === null || event === void 0 ? void 0 : (_event$clipboardData2 = event.clipboardData) === null || _event$clipboardData2 === void 0 ? void 0 : _event$clipboardData2.getData('web text/custom'));
+    currentClicked(KEYBOARD_ACTIONS.PASTE, event);
   }
 });
 var handleMouseEvent = e => {
@@ -2968,6 +2990,7 @@ function _embed3() {
       _opts$editorUrl,
       editorUrl,
       editorLink,
+      pasteSelection,
       animateCopy,
       copyAlert,
       COPY_ALERT_ID,
@@ -3230,10 +3253,92 @@ function _embed3() {
 
               if (mode == 'vega-lite' || actions === true || actions.copySelection !== false) {
                 if (actions !== true) {
+                  pasteSelection = function pasteSelection(paste) {
+                    console.log('selection', paste);
+                    console.log('pasted text', paste);
+                    /*const columns = getColumnNamesFromView(view);
+                    const statements = paste.split('and');
+                    const filters: Filter[] = [];
+                    console.log(statements);
+                     for (const statement of statements) {
+                      const columnIndex = columns.findIndex((column) => statement.includes(column));
+                      console.log(columnIndex, statement);
+                      if (columnIndex > -1) {
+                        const categoricalRegex = new RegExp(/'(.*?)'/);
+                         const numericalRegex = new RegExp(/(\d*\.?\d+)/);
+                         const operatorRegex = new RegExp(/([<>]=?|==)/);
+                         let value: string | number = '';
+                        let type: 'Numerical' | 'Categorical' = 'Numerical';
+                        console.log(numericalRegex.test(statement), categoricalRegex.test(statement));
+                        if (numericalRegex.test(statement)) {
+                          const matches = statement.match(numericalRegex) || [];
+                          if (matches?.[0]) {
+                            value = parseFloat(matches[0]);
+                          }
+                          type = 'Numerical';
+                        } else if (categoricalRegex.test(statement)) {
+                          const matches = statement.match(categoricalRegex) || [];
+                          if (matches?.[0]) {
+                            value = matches[0];
+                          }
+                          type = 'Categorical';
+                        }
+                         const operators = statement.match(operatorRegex) || [];
+                        console.log('operators', operators, value);
+                        if (value && operators?.[0]) {
+                          filters.push({
+                            columnName: columns[columnIndex],
+                            value: value,
+                            operator: operators[0] as Operator,
+                            type: type
+                          } as Filter);
+                        }
+                      }
+                    }
+                    console.log('filters', filters);
+                     const condensedFilters: Record<string, Filter[]> = filters.reduce((acc, filter) => {
+                      if (!acc?.[filter.columnName]) {
+                        acc[filter.columnName] = [];
+                      }
+                      acc[filter.columnName].push(filter);
+                      return acc;
+                    }, {} as any);
+                     const processedFilters = Object.keys(condensedFilters)
+                      .map((key) => {
+                        const filters = condensedFilters[key];
+                        if (filters.length >= 1) {
+                          const items = filters.map((filter) => filter.value).sort();
+                          console.log('bounds', items);
+                          return {field: key, range: items};
+                        }
+                      })
+                      .filter(Boolean);
+                     const signalValue: Record<string, (string | number)[]> = {};
+                    for (const filter of processedFilters) {
+                      if (filter) {
+                        signalValue[filter.field] = filter?.range;
+                      }
+                    }
+                     console.log('setting selection', signalValue);
+                     */
+
+                    view.data('ALX_SELECTION_drag_FILTER_store', paste).runAsync().then(val => {
+                      console.log('ran', val, view.data('ALX_SELECTION_drag_FILTER_store'));
+                    });
+
+                    //view.remove('source_0', (d: any) => d.Miles_per_Gallon < 20).run();
+                    //view.signal('arbitrary_filt', signalValue).runAsync();
+
+                    // numerical filter should add [lb,ub]
+                    // categorical filter should add [val_1,val_2,...]
+
+                    // ordinal df.query("((Director=='Tim Burton'))")
+                    // numerical df.query(" (EXTRACTTHIS>=106.00 and EXTRACTTHIS<=223.00)  and  (EXTRACTTHIS2>=5.22 and EXTRACTTHIS2<=29.75) ")
+
+                    // if selection uses vgsids, select corresponding data points
+                  };
                   animateCopy = function animateCopy() {
                     var _document, _document$getElementB;
-                    console.log('before animate');
-                    console.log('hiding animate!');
                     (_document = document) === null || _document === void 0 ? void 0 : (_document$getElementB = _document.getElementById(COPY_ALERT_ID)) === null || _document$getElementB === void 0 ? void 0 : _document$getElementB.animate([{
                       opacity: '1',
                       transform: 'translateY(-10px)'
@@ -3244,7 +3349,6 @@ function _embed3() {
                       duration: 750,
                       iterations: 1
                     });
-                    console.log('past animate');
                   };
                   // add
                   // if clicked on and haven't clicked on anything else
@@ -3267,9 +3371,17 @@ function _embed3() {
                   element.appendChild(copyAlert);
                   view.addEventListener('mousedown', function (event) {
                     console.log('setting current clicked pre', currentClicked);
-                    currentClicked = () => {
+                    currentClicked = (command, event) => {
+                      if (command === KEYBOARD_ACTIONS.COPY) {
+                        console.log(view.signal);
+                        copyText(event);
+                      } else {
+                        var _event$clipboardData3;
+                        var selection = JSON.parse(((_event$clipboardData3 = event.clipboardData) === null || _event$clipboardData3 === void 0 ? void 0 : _event$clipboardData3.getData('web text/custom')) || '');
+                        console.log('copied selection!', selection);
+                        pasteSelection(selection);
+                      }
                       console.log('current click ran');
-                      copyText();
                     };
                     console.log('setting current clicked after', currentClicked);
                     event.preventDefault();
@@ -3278,8 +3390,7 @@ function _embed3() {
                   pandasLink = document.createElement('a');
                   pandasLink.text = i18n.QUERY_ACTION;
                   pandasLink.href = '#';
-                  copyText = function copyText() {
-                    console.log('in copytext!');
+                  copyText = function copyText(event) {
                     var _view$getState = view.getState({
                         data: vega.truthy,
                         signals: vega.falsy,
@@ -3288,11 +3399,12 @@ function _embed3() {
                       data = _view$getState.data;
                     // as selections store their data in a dataset with the suffix "*_store", find those selections
                     var selectionNames = Object.keys(data).filter(key => key.includes('_store')).map(key => key.replace('_store', ''));
-                    console.log('past sel names!');
+                    view.setState;
                     var queries = {
                       group: [],
                       filter: []
                     };
+                    console.log('selectionNames', selectionNames);
                     var _iterator6 = _createForOfIteratorHelper(selectionNames),
                       _step6;
                     try {
@@ -3301,12 +3413,12 @@ function _embed3() {
                         if (!selection.includes('ALX')) continue;
                         console.log('at sel!', selection);
                         var signal = view.signal(selection);
-                        console.log('at signal!', selection);
+                        console.log('at signal!', signal);
                         if (signal) {
                           if (selection.includes('GROUP')) {
                             var group = createGroupFromSelectionName(selection, view);
                             if (group !== '') {
-                              queries.filter.push(group);
+                              queries.group.push(group);
                             }
                           } else if (selection.includes('FILTER')) {
                             var query = createQueryFromSelectionName(selection, view);
@@ -3327,22 +3439,46 @@ function _embed3() {
                     var text = filter_text + group_text;
                     console.log('text!', queries);
                     if (text.length > 0) {
-                      var copyPromise = copyTextToClipboard(text);
+                      var _event$clipboardData4, _event$clipboardData6;
+                      console.log('setting custom!');
+
+                      /*event?.clipboardData?.setData('web text/custom', '{"value":2}');
+                      event?.clipboardData?.setData('text/plain', text);
+                      event?.clipboardData?.setData('text', text);*/
+
+                      /*const textBlob = new Blob([text], {type: 'text/plain'});
+                       const selectionBlob = new Blob(['{"value":222}'], {type: 'web text/custom'});
+                      const selectionItem = new ClipboardItem({'text/plain': textBlob, 'web text/custom': selectionBlob});
+                       event.clipboardData?.items.add(selectionItem);*/
+                      event === null || event === void 0 ? void 0 : (_event$clipboardData4 = event.clipboardData) === null || _event$clipboardData4 === void 0 ? void 0 : _event$clipboardData4.setData('text/plain', text);
+                      console.log('signals', view.getState().signals);
+                      var selname = selectionNames.find(name => name.includes('ALX'));
+                      if (selname) {
+                        var _event$clipboardData5;
+                        console.log('selname', selname);
+                        var _data = view.data(selname + '_store');
+                        console.log('datas', _data);
+                        event === null || event === void 0 ? void 0 : (_event$clipboardData5 = event.clipboardData) === null || _event$clipboardData5 === void 0 ? void 0 : _event$clipboardData5.setData('web text/custom', JSON.stringify(_data));
+                      }
+                      console.log(event === null || event === void 0 ? void 0 : event.clipboardData, 'set', event === null || event === void 0 ? void 0 : (_event$clipboardData6 = event.clipboardData) === null || _event$clipboardData6 === void 0 ? void 0 : _event$clipboardData6.setData);
+                      event === null || event === void 0 ? void 0 : event.preventDefault();
+                      /*console.log(
+                        'just logged',
+                        event.clipboardData?.types,
+                        'event',
+                        event?.clipboardData?.getData('web text/custom')
+                      );
+                         const copyPromise = copyTextToClipboard(text);
                       console.log('pastcopyPromise', copyPromise);
-                      copyPromise.then(function () {
-                        console.log('copy success!');
-                        animateCopy();
-                        console.log('animate success!');
-                      }, function (err) {
-                        console.error('Async: Could not copy text: ', err);
-                      });
-                      console.log('text', text, navigator.clipboard);
+                      */
+
+                      animateCopy();
                     }
 
                     //e.preventDefault();
                   };
 
-                  pandasLink.addEventListener('click', copyText);
+                  pandasLink.addEventListener('click', () => copyText());
                   ctrl.append(pandasLink);
                 }
               }
@@ -3402,14 +3538,17 @@ function createQueryFromSelectionName(selectionName, view) {
   var signal = view.signal(selectionName);
   if ('vlPoint' in signal) {
     var selection = signal['vlPoint'];
+    console.log('selection', selection);
     var vgsidToSelect = selection['or'].map(item => item._vgsid_).filter(item => item);
     var sourceName = 'source_0';
     var dataName = 'data_0';
+    console.log('selection', vgsidToSelect, selection['or'].map(item => item._vgsid_));
     var query = '';
     var source = view.data(sourceName);
     if (vgsidToSelect.length > 0) {
       // if selection uses vgsids, select corresponding data points
       var data = view.data(dataName);
+      console.log('data', data);
       var selectedItems = cleanVegaProperties(source, data.filter(datum => vgsidToSelect.includes(datum._vgsid_)));
       query = createQueryFromData(selectedItems);
     } else {
@@ -3539,32 +3678,6 @@ function encodeValueAsString(datumValue) {
   }
   return datumValue.toString();
 }
-
-//from https://stackoverflow.com/questions/400212/how-do-i-copy-to-the-clipboard-in-javascript
-function fallbackCopyTextToClipboard(text) {
-  var textArea = document.createElement('textarea');
-  textArea.value = text;
-
-  // Avoid scrolling to bottom
-  textArea.style.top = '0';
-  textArea.style.left = '0';
-  textArea.style.position = 'fixed';
-  document.body.appendChild(textArea);
-  textArea.focus();
-  textArea.select();
-  try {
-    var successful = document.execCommand('copy');
-    if (successful) {
-      return Promise.resolve('successful');
-    } else {
-      return Promise.reject('unsuccessful');
-    }
-  } catch (err) {
-    console.error('Fallback: Oops, unable to copy', err);
-  }
-  document.body.removeChild(textArea);
-  return Promise.reject('unsuccessful');
-}
 window.addEventListener('message', event => {
   // IMPORTANT: check the origin of the data!
   if (event.origin === 'https://colab.research.google.com') {
@@ -3579,14 +3692,14 @@ window.addEventListener('message', event => {
     return;
   }
 });
-function copyTextToClipboard(text) {
+
+/*
+function copyTextToClipboard(text: string) {
   console.log('in copy text to clipboard', text);
   console.log('in copy text to clipboard', navigator);
-  if (!navigator.clipboard) {
-    return fallbackCopyTextToClipboard(text);
-  }
-  return navigator.clipboard.writeText(text);
-}
+
+  return navigator.clipboard.setData('', text);
+}*/
 
 export { DEFAULT_ACTIONS, embed as default, guessMode, vega, _vegaLite as vegaLite, version };
 //# sourceMappingURL=vega-embed.module.js.map

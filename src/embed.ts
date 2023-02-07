@@ -220,10 +220,32 @@ function embedOptionsFromUsermeta(parsedSpec: VisualizationSpec) {
   }
   return opts;
 }
-document.addEventListener('copy', () => {
+const KEYBOARD_ACTIONS = {PASTE: 'paste', COPY: 'copy'};
+document.addEventListener('copy', (event: ClipboardEvent) => {
   if (currentClicked) {
-    console.log('in current click');
-    currentClicked();
+    currentClicked(KEYBOARD_ACTIONS.COPY, event);
+  }
+});
+
+document.addEventListener('paste', (event: ClipboardEvent) => {
+  if (currentClicked) {
+    /*event.clipboardData?.types
+    const items =  navigator.clipboard.read().then(items=>{
+      const item = items[0]
+
+      if (item.types.includes("web text/custom")) {
+        // prefer this web app's custom markup if available
+        // process the custom markup...
+      }
+
+    })*/
+
+    // store pastable text here
+    console.log('pasted new ', event?.clipboardData?.getData('text/plain'));
+    // store object here
+    console.log('pasted web ', event?.clipboardData?.getData('web text/custom'));
+
+    currentClicked(KEYBOARD_ACTIONS.PASTE, event);
   }
 });
 
@@ -570,11 +592,148 @@ async function _embed(
 
         element.appendChild(copyAlert);
 
+        function getColumnNamesFromView(view: vegaImport.View) {
+          const sourceName = 'source_0';
+          const dataName = 'data_0';
+
+          const source = view.data(sourceName);
+
+          let columns: string[] = [];
+          if (source && source.length > 0 && source[0]) {
+            const data = view.data(dataName);
+            console.log('data', data);
+            columns = Object.keys(data[0]).filter((column) => column);
+            console.log('added columns', columns);
+          }
+          return columns;
+        }
+
+        type Operator = '==' | '>=' | '<=' | '>' | '<';
+        interface NumericalFilter {
+          operator: Operator;
+          columnName: string;
+          value: number;
+          type: 'Numerical';
+        }
+        interface CategoricalFilter {
+          operator: Operator;
+          columnName: string;
+          value: string;
+          type: 'Categorical';
+        }
+        type Filter = NumericalFilter | CategoricalFilter;
+
+        function pasteSelection(paste: any) {
+          console.log('selection', paste);
+          console.log('pasted text', paste);
+          /*const columns = getColumnNamesFromView(view);
+          const statements = paste.split('and');
+          const filters: Filter[] = [];
+          console.log(statements);
+
+          for (const statement of statements) {
+            const columnIndex = columns.findIndex((column) => statement.includes(column));
+            console.log(columnIndex, statement);
+            if (columnIndex > -1) {
+              const categoricalRegex = new RegExp(/'(.*?)'/);
+
+              const numericalRegex = new RegExp(/(\d*\.?\d+)/);
+
+              const operatorRegex = new RegExp(/([<>]=?|==)/);
+
+              let value: string | number = '';
+              let type: 'Numerical' | 'Categorical' = 'Numerical';
+              console.log(numericalRegex.test(statement), categoricalRegex.test(statement));
+              if (numericalRegex.test(statement)) {
+                const matches = statement.match(numericalRegex) || [];
+                if (matches?.[0]) {
+                  value = parseFloat(matches[0]);
+                }
+                type = 'Numerical';
+              } else if (categoricalRegex.test(statement)) {
+                const matches = statement.match(categoricalRegex) || [];
+                if (matches?.[0]) {
+                  value = matches[0];
+                }
+                type = 'Categorical';
+              }
+
+              const operators = statement.match(operatorRegex) || [];
+              console.log('operators', operators, value);
+              if (value && operators?.[0]) {
+                filters.push({
+                  columnName: columns[columnIndex],
+                  value: value,
+                  operator: operators[0] as Operator,
+                  type: type
+                } as Filter);
+              }
+            }
+          }
+          console.log('filters', filters);
+
+          const condensedFilters: Record<string, Filter[]> = filters.reduce((acc, filter) => {
+            if (!acc?.[filter.columnName]) {
+              acc[filter.columnName] = [];
+            }
+            acc[filter.columnName].push(filter);
+            return acc;
+          }, {} as any);
+
+          const processedFilters = Object.keys(condensedFilters)
+            .map((key) => {
+              const filters = condensedFilters[key];
+              if (filters.length >= 1) {
+                const items = filters.map((filter) => filter.value).sort();
+                console.log('bounds', items);
+                return {field: key, range: items};
+              }
+            })
+            .filter(Boolean);
+
+          const signalValue: Record<string, (string | number)[]> = {};
+          for (const filter of processedFilters) {
+            if (filter) {
+              signalValue[filter.field] = filter?.range;
+            }
+          }
+
+          console.log('setting selection', signalValue);
+
+          */
+
+          view
+            .data('ALX_SELECTION_drag_FILTER_store', paste)
+            .runAsync()
+            .then((val) => {
+              console.log('ran', val, view.data('ALX_SELECTION_drag_FILTER_store'));
+            });
+
+          //view.remove('source_0', (d: any) => d.Miles_per_Gallon < 20).run();
+          //view.signal('arbitrary_filt', signalValue).runAsync();
+
+          // numerical filter should add [lb,ub]
+          // categorical filter should add [val_1,val_2,...]
+
+          // ordinal df.query("((Director=='Tim Burton'))")
+          // numerical df.query(" (EXTRACTTHIS>=106.00 and EXTRACTTHIS<=223.00)  and  (EXTRACTTHIS2>=5.22 and EXTRACTTHIS2<=29.75) ")
+
+          // if selection uses vgsids, select corresponding data points
+        }
+
         view.addEventListener('mousedown', function (event) {
           console.log('setting current clicked pre', currentClicked);
-          currentClicked = () => {
+          currentClicked = (command: string, event: ClipboardEvent) => {
+            if (command === KEYBOARD_ACTIONS.COPY) {
+              console.log(view.signal);
+              copyText(event);
+            } else {
+              const selection = JSON.parse(event.clipboardData?.getData('web text/custom') || '');
+
+              console.log('copied selection!', selection);
+              pasteSelection(selection);
+            }
             console.log('current click ran');
-            copyText();
           };
           console.log('setting current clicked after', currentClicked);
 
@@ -587,8 +746,6 @@ async function _embed(
         pandasLink.text = i18n.QUERY_ACTION;
         pandasLink.href = '#';
         function animateCopy() {
-          console.log('before animate');
-          console.log('hiding animate!');
           document?.getElementById(COPY_ALERT_ID)?.animate(
             [
               {opacity: '1', transform: 'translateY(-10px)'},
@@ -599,37 +756,36 @@ async function _embed(
               iterations: 1
             }
           );
-          console.log('past animate');
         }
 
-        const copyText = function () {
-          console.log('in copytext!');
-
+        const copyText = function (event?: ClipboardEvent) {
           const {data} = view.getState({data: vega.truthy, signals: vega.falsy, recurse: true});
           // as selections store their data in a dataset with the suffix "*_store", find those selections
           const selectionNames = Object.keys(data)
             .filter((key) => key.includes('_store'))
             .map((key) => key.replace('_store', ''));
 
-          console.log('past sel names!');
+          view.setState;
 
           const queries: Record<string, string[]> = {
             group: [],
             filter: []
           };
 
+          console.log('selectionNames', selectionNames);
+
           for (const selection of selectionNames) {
             if (!selection.includes('ALX')) continue;
             console.log('at sel!', selection);
 
             const signal = view.signal(selection);
-            console.log('at signal!', selection);
+            console.log('at signal!', signal);
 
             if (signal) {
               if (selection.includes('GROUP')) {
                 const group = createGroupFromSelectionName(selection, view);
                 if (group !== '') {
-                  queries.filter.push(group);
+                  queries.group.push(group);
                 }
               } else if (selection.includes('FILTER')) {
                 const query = createQueryFromSelectionName(selection, view);
@@ -651,25 +807,51 @@ async function _embed(
           console.log('text!', queries);
 
           if (text.length > 0) {
+            console.log('setting custom!');
+
+            /*event?.clipboardData?.setData('web text/custom', '{"value":2}');
+            event?.clipboardData?.setData('text/plain', text);
+            event?.clipboardData?.setData('text', text);*/
+
+            /*const textBlob = new Blob([text], {type: 'text/plain'});
+
+            const selectionBlob = new Blob(['{"value":222}'], {type: 'web text/custom'});
+            const selectionItem = new ClipboardItem({'text/plain': textBlob, 'web text/custom': selectionBlob});
+
+            event.clipboardData?.items.add(selectionItem);*/
+            event?.clipboardData?.setData('text/plain', text);
+            console.log('signals', view.getState().signals);
+            const selname = selectionNames.find((name) => name.includes('ALX'));
+            if (selname) {
+              console.log('selname', selname);
+              const data = view.data(selname + '_store');
+              console.log('datas', data);
+
+              event?.clipboardData?.setData('web text/custom', JSON.stringify(data));
+            }
+
+            console.log(event?.clipboardData, 'set', event?.clipboardData?.setData);
+            event?.preventDefault();
+            /*console.log(
+              'just logged',
+              event.clipboardData?.types,
+              'event',
+              event?.clipboardData?.getData('web text/custom')
+            );
+
+
+
             const copyPromise = copyTextToClipboard(text);
             console.log('pastcopyPromise', copyPromise);
-            copyPromise.then(
-              function () {
-                console.log('copy success!');
-                animateCopy();
-                console.log('animate success!');
-              },
-              function (err) {
-                console.error('Async: Could not copy text: ', err);
-              }
-            );
-            console.log('text', text, navigator.clipboard);
+            */
+
+            animateCopy();
           }
 
           //e.preventDefault();
         };
 
-        pandasLink.addEventListener('click', copyText);
+        pandasLink.addEventListener('click', () => copyText());
 
         ctrl.append(pandasLink);
       }
@@ -727,19 +909,28 @@ df.groupby("ALX_GROUP").mean(numeric_only=True)
 
 function createQueryFromSelectionName(selectionName: string, view: View) {
   const signal = view.signal(selectionName);
+
   if ('vlPoint' in signal) {
     const selection = signal['vlPoint'];
+    console.log('selection', selection);
 
     const vgsidToSelect = selection['or'].map((item: any) => item._vgsid_).filter((item: any) => item);
 
     const sourceName = 'source_0';
     const dataName = 'data_0';
+    console.log(
+      'selection',
+      vgsidToSelect,
+      selection['or'].map((item: any) => item._vgsid_)
+    );
+
     let query = '';
     const source = view.data(sourceName);
 
     if (vgsidToSelect.length > 0) {
       // if selection uses vgsids, select corresponding data points
       const data = view.data(dataName);
+      console.log('data', data);
 
       const selectedItems = cleanVegaProperties(
         source,
@@ -888,12 +1079,10 @@ window.addEventListener('message', (event) => {
   }
 });
 
+/*
 function copyTextToClipboard(text: string) {
   console.log('in copy text to clipboard', text);
   console.log('in copy text to clipboard', navigator);
 
-  if (!navigator.clipboard) {
-    return fallbackCopyTextToClipboard(text);
-  }
-  return navigator.clipboard.writeText(text);
-}
+  return navigator.clipboard.setData('', text);
+}*/
