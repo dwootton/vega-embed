@@ -5104,7 +5104,6 @@
               });
               // as selections store their data in a dataset with the suffix "*_store", find those selections
               const selectionNames = Object.keys(data).filter(key => key.includes('_store')).map(key => key.replace('_store', ''));
-              view.setState;
               const queries = {
                 group: [],
                 filter: []
@@ -5227,6 +5226,7 @@ df.groupby("ALX_GROUP").mean(numeric_only=True)
     }
     function createQueryFromSelectionName(selectionName, view) {
       const signal = view.signal(selectionName);
+      console.log('signal', signal);
       if ('vlPoint' in signal) {
         const selection = signal['vlPoint'];
         console.log('selection', selection);
@@ -5235,8 +5235,9 @@ df.groupby("ALX_GROUP").mean(numeric_only=True)
         const dataName = 'data_0';
         console.log('selection', vgsidToSelect, selection['or'].map(item => item._vgsid_));
         let query = '';
-        const source = view.data(sourceName);
         if (vgsidToSelect.length > 0) {
+          const source = view.data(sourceName);
+
           // if selection uses vgsids, select corresponding data points
           const data = view.data(dataName);
           console.log('data', data);

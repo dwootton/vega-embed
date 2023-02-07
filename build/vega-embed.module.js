@@ -3425,7 +3425,6 @@ function _embed3() {
                       data = _view$getState2.data;
                     // as selections store their data in a dataset with the suffix "*_store", find those selections
                     var selectionNames = Object.keys(data).filter(key => key.includes('_store')).map(key => key.replace('_store', ''));
-                    view.setState;
                     var queries = {
                       group: [],
                       filter: []
@@ -3562,6 +3561,7 @@ function createGroupFromSelectionName(selectionName, view) {
 }
 function createQueryFromSelectionName(selectionName, view) {
   var signal = view.signal(selectionName);
+  console.log('signal', signal);
   if ('vlPoint' in signal) {
     var selection = signal['vlPoint'];
     console.log('selection', selection);
@@ -3570,8 +3570,9 @@ function createQueryFromSelectionName(selectionName, view) {
     var dataName = 'data_0';
     console.log('selection', vgsidToSelect, selection['or'].map(item => item._vgsid_));
     var query = '';
-    var source = view.data(sourceName);
     if (vgsidToSelect.length > 0) {
+      var source = view.data(sourceName);
+
       // if selection uses vgsids, select corresponding data points
       var data = view.data(dataName);
       console.log('data', data);
