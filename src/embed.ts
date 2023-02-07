@@ -789,8 +789,6 @@ async function _embed(
             .filter((key) => key.includes('_store'))
             .map((key) => key.replace('_store', ''));
 
-          view.setState;
-
           const queries: Record<string, string[]> = {
             group: [],
             filter: []
@@ -933,7 +931,7 @@ df.groupby("ALX_GROUP").mean(numeric_only=True)
 
 function createQueryFromSelectionName(selectionName: string, view: View) {
   const signal = view.signal(selectionName);
-
+  console.log('signal', signal);
   if ('vlPoint' in signal) {
     const selection = signal['vlPoint'];
     console.log('selection', selection);
@@ -949,9 +947,10 @@ function createQueryFromSelectionName(selectionName: string, view: View) {
     );
 
     let query = '';
-    const source = view.data(sourceName);
 
     if (vgsidToSelect.length > 0) {
+      const source = view.data(sourceName);
+
       // if selection uses vgsids, select corresponding data points
       const data = view.data(dataName);
       console.log('data', data);
