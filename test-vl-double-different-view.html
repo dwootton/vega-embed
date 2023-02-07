@@ -156,36 +156,51 @@
         };
         const spec2 = {
           config: { view: { continuousWidth: 400, continuousHeight: 300 } },
-          data: {
-            url: "https://gist.githubusercontent.com/dwootton/faf7769597f3304140afc722839e2771/raw/3bfdac3a9b4340061f505b7987ab6321fe449f50/cars.csv"
-          },
-          mark: { type: "bar", cursor: "pointer" },
-          encoding: {
-            color: {
-              condition: {
-                value: "steelblue",
-                param: "ALX_SELECTION_click_FILTER"
+          layer: [
+            {
+              mark: { type: "bar", cursor: "pointer" },
+              encoding: {
+                color: { value: "lightgray" },
+                x: { axis: {}, field: "Origin", sort: "-y", type: "nominal" },
+                y: {
+                  aggregate: "count",
+                  axis: {},
+                  field: "Origin",
+                  type: "quantitative"
+                }
               },
-              value: "lightgray"
+              name: "view_1"
             },
-            x: { axis: {}, field: "Origin", sort: "-y", type: "nominal" },
-            y: {
-              aggregate: "count",
-              axis: {},
-              field: "Origin",
-              type: "quantitative"
+            {
+              mark: { type: "bar", cursor: "pointer" },
+              encoding: {
+                x: { axis: {}, field: "Origin", sort: "-y", type: "nominal" },
+                y: {
+                  aggregate: "count",
+                  axis: {},
+                  field: "Origin",
+                  type: "quantitative"
+                }
+              },
+              transform: [{ filter: { param: "ALX_SELECTION_click_FILTER" } }]
             }
-          },
+          ],
+          data: { name: "data-f02450ab61490a1363517a0190416235" },
           height: 150,
           params: [
             {
               name: "ALX_SELECTION_click_FILTER",
-              select: { type: "point", encodings: ["x"], fields: [] }
+              select: { type: "point", encodings: ["x"], fields: [] },
+              views: ["view_1"]
             }
           ],
           width: 250,
+          data: {
+            url: "https://gist.githubusercontent.com/dwootton/faf7769597f3304140afc722839e2771/raw/3bfdac3a9b4340061f505b7987ab6321fe449f50/cars.csv"
+          },
           $schema: "https://vega.github.io/schema/vega-lite/v5.2.0.json"
         };
+
         const result = await vegaEmbed("#vis", spec2, {
           config: config,
           tooltip: { theme: "dark" }

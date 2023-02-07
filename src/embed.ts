@@ -578,16 +578,13 @@ async function _embed(
 
         copyAlert.id = COPY_ALERT_ID;
 
-        copyAlert.innerHTML = 'Copied!';
         copyAlert.style.opacity = '0';
         copyAlert.style.fontFamily = 'Lato, Helvetica, sans-serif';
         copyAlert.style.color = 'black';
         copyAlert.style.margin = '4px auto';
         copyAlert.style.padding = '8px';
-        copyAlert.style.background = '#a8f0c6';
         copyAlert.style.width = '100px';
-        copyAlert.style.borderLeft = '5px solid darkgreen';
-        copyAlert.style.borderRadius = '5px';
+        copyAlert.style.borderRadius = '4px';
         copyAlert.style.textAlign = 'center';
 
         element.appendChild(copyAlert);
@@ -701,12 +698,18 @@ async function _embed(
           console.log('setting selection', signalValue);
 
           */
+          const {data} = view.getState({data: vega.truthy, signals: vega.falsy, recurse: true});
+          // as selections store their data in a dataset with the suffix "*_store", find those selections
+          const selectionNames = Object.keys(data).filter((key) => key.includes('_store'));
 
+          const selname = selectionNames.find((name) => name.includes('ALX')) || '';
+          console.log('pasting selname', selname);
           view
-            .data('ALX_SELECTION_drag_FILTER_store', paste)
+            .data(selname, paste)
             .runAsync()
             .then((val) => {
-              console.log('ran', val, view.data('ALX_SELECTION_drag_FILTER_store'));
+              console.log('selection after', view.data(selname));
+              animatePaste();
             });
 
           //view.remove('source_0', (d: any) => d.Miles_per_Gallon < 20).run();
@@ -746,7 +749,28 @@ async function _embed(
         pandasLink.text = i18n.QUERY_ACTION;
         pandasLink.href = '#';
         function animateCopy() {
-          document?.getElementById(COPY_ALERT_ID)?.animate(
+          copyAlert.innerHTML = 'Copied!';
+          copyAlert.style.borderLeft = '5px solid darkgreen';
+          copyAlert.style.borderRadius = '5px';
+          copyAlert.style.background = '#a8f0c6';
+
+          copyAlert.animate(
+            [
+              {opacity: '1', transform: 'translateY(-10px)'},
+              {opacity: '0', transform: 'translateY(0px)'}
+            ],
+            {
+              duration: 750,
+              iterations: 1
+            }
+          );
+        }
+        function animatePaste() {
+          copyAlert.innerHTML = 'Pasted!';
+          copyAlert.style.borderLeft = '5px solid darkgray';
+          copyAlert.style.background = '#bbbbbb';
+
+          copyAlert.animate(
             [
               {opacity: '1', transform: 'translateY(-10px)'},
               {opacity: '0', transform: 'translateY(0px)'}
