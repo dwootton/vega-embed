@@ -3571,6 +3571,7 @@ function createQueryFromSelectionName(selectionName, view) {
     console.log('selection', vgsidToSelect, selection['or'].map(item => item._vgsid_));
     var query = '';
     if (vgsidToSelect.length > 0) {
+      console.log('in vgsid');
       var source = view.data(sourceName);
 
       // if selection uses vgsids, select corresponding data points
