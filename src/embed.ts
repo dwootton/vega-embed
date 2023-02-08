@@ -826,6 +826,7 @@ async function _embed(
           `);
 
           let text = '';
+
           if (queries['filter'].length > 0) {
             text += filter_text;
           }
