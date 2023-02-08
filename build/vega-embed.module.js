@@ -3461,8 +3461,13 @@ function _embed3() {
                     console.log('post query!', queries);
                     var filter_text = "df.query(\"".concat(queries['filter'].join(' and '), "\")\n          ");
                     var group_text = queries['group'].join("\n          ");
-                    var text = filter_text + group_text;
-                    console.log('text!', queries);
+                    var text = '';
+                    if (queries['filter'].length > 0) {
+                      text += filter_text;
+                    }
+                    if (queries['group'].length > 0) {
+                      text += group_text;
+                    }
                     if (text.length > 0) {
                       var _event$clipboardData4, _event$clipboardData6;
                       console.log('setting custom!');
