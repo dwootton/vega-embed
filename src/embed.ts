@@ -825,8 +825,14 @@ async function _embed(
           const group_text = queries['group'].join(`
           `);
 
-          const text = filter_text + group_text;
-          console.log('text!', queries);
+          let text = '';
+          if (queries['filter'].length > 0) {
+            text += filter_text;
+          }
+
+          if (queries['group'].length > 0) {
+            text += group_text;
+          }
 
           if (text.length > 0) {
             console.log('setting custom!');
