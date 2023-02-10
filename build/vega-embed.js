@@ -5096,14 +5096,15 @@
             }
             const copyText = function (event) {
               const {
-                data
+                data,
+                signals
               } = view.getState({
                 data: vega.truthy,
-                signals: vega.falsy,
+                signals: vega.truthy,
                 recurse: true
               });
               // as selections store their data in a dataset with the suffix "*_store", find those selections
-              const selectionNames = Object.keys(data).filter(key => key.includes('_store')).map(key => key.replace('_store', ''));
+              const selectionNames = Object.keys(data).filter(key => key.includes('_store')).map(key => key.replace('_store', '')).concat(Object.keys(signals).filter(key => key.includes('ALX')));
               const queries = {
                 group: [],
                 filter: []
@@ -5121,7 +5122,7 @@
                       queries.group.push(group);
                     }
                   } else if (selection.includes('FILTER')) {
-                    const query = createQueryFromSelectionName(selection, view);
+                    const query = createQueryFromSelectionName(selection, view, spec) || '';
                     if (query !== '') {
                       queries.filter.push(query);
                     }
@@ -5156,11 +5157,14 @@
                 console.log('signals', view.getState().signals);
                 const selname = selectionNames.find(name => name.includes('ALX'));
                 if (selname) {
-                  var _event$clipboardData5;
                   console.log('selname', selname);
-                  const data = view.data(selname + '_store');
-                  console.log('datas', data);
-                  event === null || event === void 0 ? void 0 : (_event$clipboardData5 = event.clipboardData) === null || _event$clipboardData5 === void 0 ? void 0 : _event$clipboardData5.setData('web text/custom', JSON.stringify(data));
+                  if (!selname.includes('query')) {
+                    var _event$clipboardData5;
+                    // selections bound to input elements don't store data in a dataset.
+                    const data = view.data(selname + '_store');
+                    console.log('datas', data);
+                    event === null || event === void 0 ? void 0 : (_event$clipboardData5 = event.clipboardData) === null || _event$clipboardData5 === void 0 ? void 0 : _event$clipboardData5.setData('web text/custom', JSON.stringify(data));
+                  }
                 }
                 console.log(event === null || event === void 0 ? void 0 : event.clipboardData, 'set', event === null || event === void 0 ? void 0 : (_event$clipboardData6 = event.clipboardData) === null || _event$clipboardData6 === void 0 ? void 0 : _event$clipboardData6.setData);
                 event === null || event === void 0 ? void 0 : event.preventDefault();
@@ -5230,9 +5234,10 @@ df.groupby("ALX_GROUP").mean(numeric_only=True)
       return query;
     }
     function createQueryFromSelectionName(selectionName, view) {
+      let spec = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
       const signal = view.signal(selectionName);
-      console.log('signal', signal);
-      if ('vlPoint' in signal) {
+      console.log('signal', signal, 'spec', spec);
+      if (typeof signal == 'object' && 'vlPoint' in signal) {
         const selection = signal['vlPoint'];
         console.log('selection', selection);
         const vgsidToSelect = selection['or'].map(item => item._vgsid_).filter(item => item);
@@ -5255,7 +5260,8 @@ df.groupby("ALX_GROUP").mean(numeric_only=True)
         }
         return query;
         // after selecting an item create filter
-      } else {
+      } else if (Array.isArray(signal)) {
+        console.log('in interval', signal);
         // interval selection
         // TODO: account for interval selection on ordinal
 
@@ -5288,12 +5294,30 @@ df.groupby("ALX_GROUP").mean(numeric_only=True)
                 const [lowerBound, upperBound] = bounds;
                 queries.push(createQueryFromBounds(fieldName, lowerBound, upperBound));
               });
-              console.log(' 772', selectionInstances);
             }
           }
         }
-        console.log(' about to join', queries);
         return queries.join(' and ');
+      } else if (vegaImport.isString(signal)) {
+        console.log('vis spec in signal', spec, signal);
+        if ('transform' in spec) {
+          let field;
+          const transformed = JSON.stringify(spec.transform);
+          const regex = /(?<=(toString\(datum\[))'(.*?)'/;
+          const matches = transformed.match(regex);
+          if (matches) {
+            field = matches[2];
+            console.log('matches', matches, field);
+            return '`' + field + "`.str.contains('" + signal + "',case=False,na=False)";
+          }
+        }
+        // matches the column name that is targeted by the input element
+        console.log('view', view);
+
+        /*
+        return datumStringConstructor.push(`${key.toString()}==${encodeValueAsString(datum[key])}`);*/
+
+        return '';
       }
 
       // ordinal interval:
@@ -5322,7 +5346,7 @@ df.groupby("ALX_GROUP").mean(numeric_only=True)
     function createQueryFromCategoricalInterval(field, data) {
       let stringConstructor = [];
       for (const datum of data) {
-        stringConstructor.push(`${field.toString()}==${encodeValueAsString(datum)}`);
+        stringConstructor.push(`\`${field.toString()}\`==${encodeValueAsString(datum)}`);
       }
       return ' (' + stringConstructor.join(' or ') + ') ';
     }

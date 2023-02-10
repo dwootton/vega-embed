@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vega-Embed for Vega-Lite</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+    <script src="build/vega-embed.js"></script>
+  </head>
+
+  <body>
+    <div id="vis"></div>
+    <script>
+      async function run() {
+        //// http://[::]:8081/test-vl-interval-select-ordinal.html#
+        const config = {
+          // default view background color
+          // covers the entire view component
+          background: "#efefef",
+          axis: {
+            labelFont: "serif",
+            labelFontSize: 16,
+            tickWidth: 3,
+            tickColor: "red"
+          }
+        };
+
+        const spec = {
+          config: { view: { continuousWidth: 400, continuousHeight: 300 } },
+          data: {
+            url: "https://gist.githubusercontent.com/dwootton/305a5bd351608dcd51f0803e66507fcb/raw/f1d9124889ca0fa8e47f240dbba9e5f6601e7d2c/birdstrikes.csv"
+          },
+          mark: "bar",
+          encoding: {
+            x: {
+              axis: {},
+              field: "Species Name",
+              sort: "-y",
+              type: "nominal"
+            },
+            y: {
+              aggregate: "count",
+              axis: {},
+              field: "Species Name",
+              type: "quantitative"
+            }
+          },
+          height: 150,
+          params: [
+            {
+              name: "ALX_SELECTION_query_FILTER",
+              bind: {
+                input: "text",
+                name: "Species Name: ",
+                placeholder: "Type to search..."
+              },
+              value: ""
+            }
+          ],
+          transform: [
+            {
+              filter:
+                "(!ALX_SELECTION_query_FILTER || test(regexp(ALX_SELECTION_query_FILTER,'i'), toString(datum['Species Name'])))"
+            }
+          ],
+          width: 500,
+          $schema: "https://vega.github.io/schema/vega-lite/v5.2.0.json"
+        };
+
+        const result = await vegaEmbed("#vis", spec, {
+          config: config,
+          tooltip: { theme: "dark" }
+        });
+
+        console.log(result);
+      }
+      run();
+    </script>
+  </body>
+</html>

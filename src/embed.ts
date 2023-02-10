@@ -783,11 +783,12 @@ async function _embed(
         }
 
         const copyText = function (event?: ClipboardEvent) {
-          const {data} = view.getState({data: vega.truthy, signals: vega.falsy, recurse: true});
+          const {data, signals} = view.getState({data: vega.truthy, signals: vega.truthy, recurse: true});
           // as selections store their data in a dataset with the suffix "*_store", find those selections
           const selectionNames = Object.keys(data)
             .filter((key) => key.includes('_store'))
-            .map((key) => key.replace('_store', ''));
+            .map((key) => key.replace('_store', ''))
+            .concat(Object.keys(signals).filter((key) => key.includes('ALX')));
 
           const queries: Record<string, string[]> = {
             group: [],
@@ -810,7 +811,7 @@ async function _embed(
                   queries.group.push(group);
                 }
               } else if (selection.includes('FILTER')) {
-                const query = createQueryFromSelectionName(selection, view);
+                const query = createQueryFromSelectionName(selection, view, spec) || '';
                 if (query !== '') {
                   queries.filter.push(query);
                 }
@@ -853,10 +854,13 @@ async function _embed(
             const selname = selectionNames.find((name) => name.includes('ALX'));
             if (selname) {
               console.log('selname', selname);
-              const data = view.data(selname + '_store');
-              console.log('datas', data);
+              if (!selname.includes('query')) {
+                // selections bound to input elements don't store data in a dataset.
+                const data = view.data(selname + '_store');
+                console.log('datas', data);
 
-              event?.clipboardData?.setData('web text/custom', JSON.stringify(data));
+                event?.clipboardData?.setData('web text/custom', JSON.stringify(data));
+              }
             }
 
             console.log(event?.clipboardData, 'set', event?.clipboardData?.setData);
@@ -936,10 +940,10 @@ df.groupby("ALX_GROUP").mean(numeric_only=True)
   return query;
 }
 
-function createQueryFromSelectionName(selectionName: string, view: View) {
+function createQueryFromSelectionName(selectionName: string, view: View, spec: VisualizationSpec = {}) {
   const signal = view.signal(selectionName);
-  console.log('signal', signal);
-  if ('vlPoint' in signal) {
+  console.log('signal', signal, 'spec', spec);
+  if (typeof signal == 'object' && 'vlPoint' in signal) {
     const selection = signal['vlPoint'];
     console.log('selection', selection);
 
@@ -976,7 +980,8 @@ function createQueryFromSelectionName(selectionName: string, view: View) {
     }
     return query;
     // after selecting an item create filter
-  } else {
+  } else if (Array.isArray(signal)) {
+    console.log('in interval', signal);
     // interval selection
     // TODO: account for interval selection on ordinal
 
@@ -1012,13 +1017,31 @@ function createQueryFromSelectionName(selectionName: string, view: View) {
 
             queries.push(createQueryFromBounds(fieldName, lowerBound, upperBound));
           });
-          console.log(' 772', selectionInstances);
         }
       }
     }
-    console.log(' about to join', queries);
 
     return queries.join(' and ');
+  } else if (isString(signal)) {
+    console.log('vis spec in signal', spec, signal);
+    if ('transform' in spec) {
+      let field;
+      const transformed = JSON.stringify(spec.transform);
+      const regex = /(?<=(toString\(datum\[))'(.*?)'/;
+      const matches = transformed.match(regex);
+      if (matches) {
+        field = matches[2];
+        console.log('matches', matches, field);
+        return '`' + field + "`.str.contains('" + signal + "',case=False,na=False)";
+      }
+    }
+    // matches the column name that is targeted by the input element
+    console.log('view', view);
+
+    /*
+    return datumStringConstructor.push(`${key.toString()}==${encodeValueAsString(datum[key])}`);*/
+
+    return '';
   }
 
   // ordinal interval:
@@ -1048,7 +1071,7 @@ function createQueryFromData(data: any[]) {
 function createQueryFromCategoricalInterval(field: string, data: string[]) {
   let stringConstructor: string[] = [];
   for (const datum of data) {
-    stringConstructor.push(`${field.toString()}==${encodeValueAsString(datum)}`);
+    stringConstructor.push(`\`${field.toString()}\`==${encodeValueAsString(datum)}`);
   }
   return ' (' + stringConstructor.join(' or ') + ') ';
 }

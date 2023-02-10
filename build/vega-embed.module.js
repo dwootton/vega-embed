@@ -3419,12 +3419,13 @@ function _embed3() {
                   copyText = function copyText(event) {
                     var _view$getState2 = view.getState({
                         data: vega.truthy,
-                        signals: vega.falsy,
+                        signals: vega.truthy,
                         recurse: true
                       }),
-                      data = _view$getState2.data;
+                      data = _view$getState2.data,
+                      signals = _view$getState2.signals;
                     // as selections store their data in a dataset with the suffix "*_store", find those selections
-                    var selectionNames = Object.keys(data).filter(key => key.includes('_store')).map(key => key.replace('_store', ''));
+                    var selectionNames = Object.keys(data).filter(key => key.includes('_store')).map(key => key.replace('_store', '')).concat(Object.keys(signals).filter(key => key.includes('ALX')));
                     var queries = {
                       group: [],
                       filter: []
@@ -3446,7 +3447,7 @@ function _embed3() {
                               queries.group.push(group);
                             }
                           } else if (selection.includes('FILTER')) {
-                            var query = createQueryFromSelectionName(selection, view);
+                            var query = createQueryFromSelectionName(selection, view, spec) || '';
                             if (query !== '') {
                               queries.filter.push(query);
                             }
@@ -3484,11 +3485,14 @@ function _embed3() {
                       console.log('signals', view.getState().signals);
                       var selname = selectionNames.find(name => name.includes('ALX'));
                       if (selname) {
-                        var _event$clipboardData5;
                         console.log('selname', selname);
-                        var _data = view.data(selname + '_store');
-                        console.log('datas', _data);
-                        event === null || event === void 0 ? void 0 : (_event$clipboardData5 = event.clipboardData) === null || _event$clipboardData5 === void 0 ? void 0 : _event$clipboardData5.setData('web text/custom', JSON.stringify(_data));
+                        if (!selname.includes('query')) {
+                          var _event$clipboardData5;
+                          // selections bound to input elements don't store data in a dataset.
+                          var _data = view.data(selname + '_store');
+                          console.log('datas', _data);
+                          event === null || event === void 0 ? void 0 : (_event$clipboardData5 = event.clipboardData) === null || _event$clipboardData5 === void 0 ? void 0 : _event$clipboardData5.setData('web text/custom', JSON.stringify(_data));
+                        }
                       }
                       console.log(event === null || event === void 0 ? void 0 : event.clipboardData, 'set', event === null || event === void 0 ? void 0 : (_event$clipboardData6 = event.clipboardData) === null || _event$clipboardData6 === void 0 ? void 0 : _event$clipboardData6.setData);
                       event === null || event === void 0 ? void 0 : event.preventDefault();
@@ -3565,9 +3569,10 @@ function createGroupFromSelectionName(selectionName, view) {
   return query;
 }
 function createQueryFromSelectionName(selectionName, view) {
+  var spec = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
   var signal = view.signal(selectionName);
-  console.log('signal', signal);
-  if ('vlPoint' in signal) {
+  console.log('signal', signal, 'spec', spec);
+  if (typeof signal == 'object' && 'vlPoint' in signal) {
     var selection = signal['vlPoint'];
     console.log('selection', selection);
     var vgsidToSelect = selection['or'].map(item => item._vgsid_).filter(item => item);
@@ -3590,8 +3595,9 @@ function createQueryFromSelectionName(selectionName, view) {
     }
     return query;
     // after selecting an item create filter
-  } else {
+  } else if (Array.isArray(signal)) {
     var _ret = function () {
+      console.log('in interval', signal);
       // interval selection
       // TODO: account for interval selection on ordinal
 
@@ -3629,7 +3635,6 @@ function createQueryFromSelectionName(selectionName, view) {
                   upperBound = _bounds[1];
                 queries.push(createQueryFromBounds(fieldName, lowerBound, upperBound));
               });
-              console.log(' 772', selectionInstances);
             }
           };
           // if field is
@@ -3642,12 +3647,31 @@ function createQueryFromSelectionName(selectionName, view) {
       } finally {
         _iterator2.f();
       }
-      console.log(' about to join', queries);
       return {
         v: queries.join(' and ')
       };
     }();
     if (typeof _ret === "object") return _ret.v;
+  } else if (isString(signal)) {
+    console.log('vis spec in signal', spec, signal);
+    if ('transform' in spec) {
+      var field;
+      var transformed = JSON.stringify(spec.transform);
+      var regex = /(?<=(toString\(datum\[))'(.*?)'/;
+      var matches = transformed.match(regex);
+      if (matches) {
+        field = matches[2];
+        console.log('matches', matches, field);
+        return '`' + field + "`.str.contains('" + signal + "',case=False,na=False)";
+      }
+    }
+    // matches the column name that is targeted by the input element
+    console.log('view', view);
+
+    /*
+    return datumStringConstructor.push(`${key.toString()}==${encodeValueAsString(datum[key])}`);*/
+
+    return '';
   }
 
   // ordinal interval:
@@ -3690,7 +3714,7 @@ function createQueryFromCategoricalInterval(field, data) {
   try {
     for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
       var datum = _step4.value;
-      stringConstructor.push("".concat(field.toString(), "==").concat(encodeValueAsString(datum)));
+      stringConstructor.push("`".concat(field.toString(), "`==").concat(encodeValueAsString(datum)));
     }
   } catch (err) {
     _iterator4.e(err);
