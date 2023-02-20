@@ -3437,16 +3437,14 @@ function _embed3() {
                       for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
                         var selection = _step6.value;
                         if (!selection.includes('ALX')) continue;
-                        console.log('at sel!', selection);
                         var signal = view.signal(selection);
-                        console.log('at signal!', signal);
                         if (signal) {
-                          if (selection.includes('GROUP')) {
+                          if (selection.endsWith('GROUP')) {
                             var group = createGroupFromSelectionName(selection, view);
                             if (group !== '') {
                               queries.group.push(group);
                             }
-                          } else if (selection.includes('FILTER')) {
+                          } else if (selection.endsWith('FILTER')) {
                             var query = createQueryFromSelectionName(selection, view, spec) || '';
                             if (query !== '') {
                               queries.filter.push(query);
@@ -3572,28 +3570,31 @@ function createQueryFromSelectionName(selectionName, view) {
   var spec = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
   var signal = view.signal(selectionName);
   console.log('signal', signal, 'spec', spec);
-  if (typeof signal == 'object' && 'vlPoint' in signal) {
-    var selection = signal['vlPoint'];
-    console.log('selection', selection);
-    var vgsidToSelect = selection['or'].map(item => item._vgsid_).filter(item => item);
-    var sourceName = 'source_0';
-    var dataName = 'data_0';
-    console.log('selection', vgsidToSelect, selection['or'].map(item => item._vgsid_));
-    var query = '';
-    if (vgsidToSelect.length > 0) {
-      console.log('in vgsid');
-      var source = view.data(sourceName);
+  if (typeof signal == 'object') {
+    if ('vlPoint' in signal) {
+      var selection = signal['vlPoint'];
+      console.log('selection', selection);
+      var vgsidToSelect = selection['or'].map(item => item._vgsid_).filter(item => item);
+      var sourceName = 'source_0';
+      var dataName = 'data_0';
+      console.log('selection', vgsidToSelect, selection['or'].map(item => item._vgsid_));
+      var query = '';
+      if (vgsidToSelect.length > 0) {
+        console.log('in vgsid');
+        var source = view.data(sourceName);
 
-      // if selection uses vgsids, select corresponding data points
-      var data = view.data(dataName);
-      console.log('data', data);
-      var selectedItems = cleanVegaProperties(source, data.filter(datum => vgsidToSelect.includes(datum._vgsid_)));
-      query = createQueryFromData(selectedItems);
-    } else {
-      // else access data query directly
-      query = createQueryFromData(selection['or']);
+        // if selection uses vgsids, select corresponding data points
+        var data = view.data(dataName);
+        console.log('data', data);
+        var selectedItems = cleanVegaProperties(source, data.filter(datum => vgsidToSelect.includes(datum._vgsid_)));
+        query = createQueryFromData(selectedItems);
+      } else {
+        // else access data query directly
+        query = createQueryFromData(selection['or']);
+      }
+      return query;
     }
-    return query;
+
     // after selecting an item create filter
   } else if (Array.isArray(signal)) {
     var _ret = function () {

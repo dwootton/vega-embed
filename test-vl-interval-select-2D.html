@@ -28,19 +28,39 @@
         };
 
         const spec = {
-          $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+          config: { view: { continuousWidth: 400, continuousHeight: 300 } },
+          mark: { type: "circle", cursor: "crosshair" },
+          encoding: {
+            color: {
+              condition: { value: "steelblue", param: "ALX_SELECTION_drag_FILTER" },
+              value: "lightgray"
+            },
+            x: {
+              axis: {},
+              field: "Horsepower",
+              scale: { zero: false },
+              type: "quantitative"
+            },
+            y: {
+              axis: {},
+              field: "Miles_per_Gallon",
+              scale: { zero: false },
+              type: "quantitative"
+            }
+          },
+          height: 200,
+          params: [
+            {
+              name: "ALX_SELECTION_drag_FILTER",
+              select: { type: "interval", encodings: ["x", "y"] }
+            }
+          ],
+          view: { cursor: "crosshair", stroke: null },
+          width: 200,
+          $schema: "https://vega.github.io/schema/vega-lite/v5.2.0.json",
+
           data: {
             url: "https://gist.githubusercontent.com/dwootton/faf7769597f3304140afc722839e2771/raw/3bfdac3a9b4340061f505b7987ab6321fe449f50/cars.csv"
-          },
-          params: [{ name: "pts", select: "interval" }],
-          mark: "rect",
-          encoding: {
-            y: { field: "Origin", type: "ordinal" },
-            x: { field: "Cylinders", type: "ordinal" },
-            color: {
-              condition: { param: "pts", aggregate: "count" },
-              value: "grey"
-            }
           }
         };
 

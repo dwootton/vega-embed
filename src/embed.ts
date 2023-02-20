@@ -799,18 +799,16 @@ async function _embed(
 
           for (const selection of selectionNames) {
             if (!selection.includes('ALX')) continue;
-            console.log('at sel!', selection);
 
             const signal = view.signal(selection);
-            console.log('at signal!', signal);
 
             if (signal) {
-              if (selection.includes('GROUP')) {
+              if (selection.endsWith('GROUP')) {
                 const group = createGroupFromSelectionName(selection, view);
                 if (group !== '') {
                   queries.group.push(group);
                 }
-              } else if (selection.includes('FILTER')) {
+              } else if (selection.endsWith('FILTER')) {
                 const query = createQueryFromSelectionName(selection, view, spec) || '';
                 if (query !== '') {
                   queries.filter.push(query);
@@ -943,42 +941,46 @@ df.groupby("ALX_GROUP").mean(numeric_only=True)
 function createQueryFromSelectionName(selectionName: string, view: View, spec: VisualizationSpec = {}) {
   const signal = view.signal(selectionName);
   console.log('signal', signal, 'spec', spec);
-  if (typeof signal == 'object' && 'vlPoint' in signal) {
-    const selection = signal['vlPoint'];
-    console.log('selection', selection);
+  if (typeof signal == 'object') {
+    if ('vlPoint' in signal) {
+      const selection = signal['vlPoint'];
+      console.log('selection', selection);
 
-    const vgsidToSelect = selection['or'].map((item: any) => item._vgsid_).filter((item: any) => item);
+      const vgsidToSelect = selection['or'].map((item: any) => item._vgsid_).filter((item: any) => item);
 
-    const sourceName = 'source_0';
-    const dataName = 'data_0';
-    console.log(
-      'selection',
-      vgsidToSelect,
-      selection['or'].map((item: any) => item._vgsid_)
-    );
-
-    let query = '';
-
-    if (vgsidToSelect.length > 0) {
-      console.log('in vgsid');
-
-      const source = view.data(sourceName);
-
-      // if selection uses vgsids, select corresponding data points
-      const data = view.data(dataName);
-      console.log('data', data);
-
-      const selectedItems = cleanVegaProperties(
-        source,
-        data.filter((datum) => vgsidToSelect.includes(datum._vgsid_))
+      const sourceName = 'source_0';
+      const dataName = 'data_0';
+      console.log(
+        'selection',
+        vgsidToSelect,
+        selection['or'].map((item: any) => item._vgsid_)
       );
 
-      query = createQueryFromData(selectedItems);
-    } else {
-      // else access data query directly
-      query = createQueryFromData(selection['or']);
+      let query = '';
+
+      if (vgsidToSelect.length > 0) {
+        console.log('in vgsid');
+
+        const source = view.data(sourceName);
+
+        // if selection uses vgsids, select corresponding data points
+        const data = view.data(dataName);
+        console.log('data', data);
+
+        const selectedItems = cleanVegaProperties(
+          source,
+          data.filter((datum) => vgsidToSelect.includes(datum._vgsid_))
+        );
+
+        query = createQueryFromData(selectedItems);
+      } else {
+        // else access data query directly
+        query = createQueryFromData(selection['or']);
+      }
+
+      return query;
     }
-    return query;
+
     // after selecting an item create filter
   } else if (Array.isArray(signal)) {
     console.log('in interval', signal);
