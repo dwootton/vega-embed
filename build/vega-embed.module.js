@@ -2984,7 +2984,7 @@ function _embed3() {
       ctrl,
       _iterator5,
       _step5,
-      _loop2,
+      _loop3,
       viewSourceLink,
       compileLink,
       _opts$editorUrl,
@@ -3159,7 +3159,7 @@ function _embed3() {
               if (actions === true || actions.export !== false) {
                 _iterator5 = _createForOfIteratorHelper(['svg', 'png']);
                 try {
-                  _loop2 = function _loop2() {
+                  _loop3 = function _loop3() {
                     var ext = _step5.value;
                     if (actions === true || actions.export === true || actions.export[ext]) {
                       var i18nExportAction = i18n["".concat(ext.toUpperCase(), "_ACTION")];
@@ -3197,7 +3197,7 @@ function _embed3() {
                     }
                   };
                   for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
-                    _loop2();
+                    _loop3();
                   }
                 } catch (err) {
                   _iterator5.e(err);
@@ -3425,47 +3425,37 @@ function _embed3() {
                       data = _view$getState2.data,
                       signals = _view$getState2.signals;
                     // as selections store their data in a dataset with the suffix "*_store", find those selections
-                    var selectionNames = Object.keys(data).filter(key => key.includes('_store')).map(key => key.replace('_store', '')).concat(Object.keys(signals).filter(key => key.includes('ALX')));
+                    var unprocessedSelectionNames = Object.keys(data).filter(key => key.endsWith('_store')).map(key => key.replace('_store', '')).concat(Object.keys(signals).filter(key => key.includes('ALX')));
+                    var selectionNames = [...new Set(unprocessedSelectionNames)];
                     var queries = {
                       group: [],
                       filter: []
                     };
                     console.log('selectionNames', selectionNames);
-                    var _iterator6 = _createForOfIteratorHelper(selectionNames),
-                      _step6;
-                    try {
-                      for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
-                        var selection = _step6.value;
-                        if (!selection.includes('ALX')) continue;
-                        var signal = view.signal(selection);
-                        if (signal) {
-                          if (selection.endsWith('GROUP')) {
-                            var group = createGroupFromSelectionName(selection, view);
-                            if (group !== '') {
-                              queries.group.push(group);
-                            }
-                          } else if (selection.endsWith('FILTER')) {
-                            var query = createQueryFromSelectionName(selection, view, spec) || '';
-                            if (query !== '') {
-                              queries.filter.push(query);
-                            }
+                    for (var _i3 = 0, _selectionNames = selectionNames; _i3 < _selectionNames.length; _i3++) {
+                      var selection = _selectionNames[_i3];
+                      if (!selection.includes('ALX')) continue;
+                      var signal = view.signal(selection);
+                      if (signal) {
+                        if (selection.endsWith('GROUP')) {
+                          var group = createGroupFromSelectionName(selection, view);
+                          if (group !== '') {
+                            queries.group.push(group);
+                          }
+                        }
+                        if (selection.endsWith('FILTER')) {
+                          var query = createQueryFromSelectionName(selection, view, spec) || null;
+                          if (query) {
+                            queries.filter = queries.filter.concat(query);
                           }
                         }
                       }
-                    } catch (err) {
-                      _iterator6.e(err);
-                    } finally {
-                      _iterator6.f();
                     }
                     console.log('post query!', queries);
                     var filter_text = "df.query(\"".concat(queries['filter'].join(' and '), "\")\n          ");
-                    var group_text = queries['group'].join("\n          ");
                     var text = '';
                     if (queries['filter'].length > 0) {
                       text += filter_text;
-                    }
-                    if (queries['group'].length > 0) {
-                      text += group_text;
                     }
                     if (text.length > 0) {
                       var _event$clipboardData4, _event$clipboardData6;
@@ -3531,16 +3521,6 @@ function _embed3() {
   }));
   return _embed3.apply(this, arguments);
 }
-function cleanVegaProperties(source, vgsidData) {
-  var keys = Object.keys(source[0]);
-  return keepKeys(vgsidData, keys);
-}
-function keepKeys(array, keysToKeep) {
-  return array.map(o => keysToKeep.reduce((acc, curr) => {
-    acc[curr] = o[curr];
-    return acc;
-  }, {}));
-}
 function createGroupFromSelectionName(selectionName, view) {
   var query = '';
   var signal = view.signal(selectionName);
@@ -3566,48 +3546,61 @@ function createGroupFromSelectionName(selectionName, view) {
   }
   return query;
 }
+function findObjectByKeyValuePair(obj, key, value) {
+  var ignoreList = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : [];
+  // Check if the key-value pair exists in the current object
+  if (obj && obj[key] === value) {
+    return obj;
+  }
+
+  // Loop through all the properties of the object
+  for (var prop in obj) {
+    if (obj.hasOwnProperty(prop)) {
+      // Recursively search through any nested objects
+      if (typeof obj[prop] === 'object' && !ignoreList.includes(prop)) {
+        var result = findObjectByKeyValuePair(obj[prop], key, value, ignoreList);
+        if (result) {
+          return result;
+        }
+      }
+    }
+  }
+
+  // If the key-value pair was not found, return null
+  return null;
+}
+function findSelectionFromSpec(selectionName, spec) {
+  console.log('finding spec', selectionName, spec);
+  // recurse through all of an object search for a params property
+  var selection = findObjectByKeyValuePair(spec, 'name', selectionName, ['data', 'datasets']);
+  console.log('found selection from spec', selection);
+  return selection;
+}
 function createQueryFromSelectionName(selectionName, view) {
   var spec = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
-  var signal = view.signal(selectionName);
-  console.log('signal', signal, 'spec', spec);
-  if (typeof signal == 'object') {
-    if ('vlPoint' in signal) {
-      var selection = signal['vlPoint'];
-      console.log('selection', selection);
-      var vgsidToSelect = selection['or'].map(item => item._vgsid_).filter(item => item);
-      var sourceName = 'source_0';
-      var dataName = 'data_0';
-      console.log('selection', vgsidToSelect, selection['or'].map(item => item._vgsid_));
-      var query = '';
-      if (vgsidToSelect.length > 0) {
-        console.log('in vgsid');
-        var source = view.data(sourceName);
-
-        // if selection uses vgsids, select corresponding data points
-        var data = view.data(dataName);
-        console.log('data', data);
-        var selectedItems = cleanVegaProperties(source, data.filter(datum => vgsidToSelect.includes(datum._vgsid_)));
-        query = createQueryFromData(selectedItems);
-      } else {
-        // else access data query directly
-        query = createQueryFromData(selection['or']);
-      }
-      return query;
-    }
-
-    // after selecting an item create filter
-  } else if (Array.isArray(signal)) {
-    var _ret = function () {
-      console.log('in interval', signal);
-      // interval selection
-      // TODO: account for interval selection on ordinal
-
-      //const selectionTuple = view.signal(selectionName + '_tuple_fields');
-      var queries = [];
-
-      // top level of _store object corresponds with the # of the selection (ie multi brush), this should typically be of length 1
+  var selection = findSelectionFromSpec(selectionName, spec);
+  var queries = [];
+  if (selection) {
+    console.log('in selection');
+    var selectionType = selection.select.type;
+    if (selectionType == 'point') {
       var selectionInstances = view.data(selectionName + '_store');
-      var _iterator2 = _createForOfIteratorHelper(selectionInstances),
+      console.log('in point instances!', selectionInstances);
+      var signal = view.signal(selectionName);
+      console.log('in point signal!', signal);
+      var keys = Object.keys(signal);
+      for (var _i = 0, _keys = keys; _i < _keys.length; _i++) {
+        var _key = _keys[_i];
+        if (_key !== 'vlPoint') {
+          var arrayConstructor = signal[_key].map(encodeValueAsString);
+          queries.push(" ".concat(_key, " in [").concat(arrayConstructor.join(','), "]"));
+        }
+      }
+      console.log('past pushed point queries', queries);
+    } else if (selectionType == 'interval') {
+      // grab the dataseta that selection is stored in
+      var _selectionInstances = view.data(selectionName + '_store');
+      var _iterator2 = _createForOfIteratorHelper(_selectionInstances),
         _step2;
       try {
         for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
@@ -3617,15 +3610,17 @@ function createQueryFromSelectionName(selectionName, view) {
             if (field.type == 'E') {
               // ordinal and nominal interval selections
 
-              selectionInstances.map(selectionInstance => {
+              _selectionInstances.map(selectionInstance => {
                 var fieldName = field.field;
                 // todo, make this
                 var categoricalValues = selectionInstance.values[fieldIndex];
-                queries.push(createQueryFromCategoricalInterval(fieldName, categoricalValues));
+                var query = createQueryFromCategoricalInterval(fieldName, categoricalValues);
+                console.log('categorical interval', query);
+                queries.push(query);
               });
             } else {
               // quantitative interval selections
-              selectionInstances.map(selectionInstance => {
+              _selectionInstances.map(selectionInstance => {
                 selectionInstance.fields[fieldIndex].field;
                 var fieldName = field.field;
                 var bounds = selectionInstance.values[fieldIndex].sort(function (a, b) {
@@ -3648,81 +3643,51 @@ function createQueryFromSelectionName(selectionName, view) {
       } finally {
         _iterator2.f();
       }
-      return {
-        v: queries.join(' and ')
-      };
-    }();
-    if (typeof _ret === "object") return _ret.v;
+    }
+    // if point,
+    // access data directly,
+    // if interval
+    //
+  }
+  /*
+  const signal = view.signal(selectionName);
+  const selectionInstances = view.data(selectionName + '_store');
+   const filters: Filter[] = [];
+  console.log('selection instance', selectionInstances);
+  console.log('signal is type:', typeof signal, signal);
+   if (typeof signal == 'object') {
+    // for point selections
+    // numerical and categorical point selections
+    // numerical and categorical interval selections
+    if ('vlPoint' in signal) {
+      const keys = Object.keys(signal);
+      for (const key of keys) {
+        if (key !== 'vlPoint') {
+          filters.push({columnName: key, values: signal[key], type: 'Categorical'} as CategoricalFilter);
+        }
+      }
+    } else {
+      const keys = Object.keys(signal);
+      for (const key of keys) {
+        if (key !== 'vlPoint') {
+          filters.push({columnName: key, values: signal[key], type: 'Categorical'} as CategoricalFilter);
+        }
+      }
+    }
+  } else if (Array.isArray(signal)) {
+    // or
+    console.log('in new array', signal);
   } else if (isString(signal)) {
-    console.log('vis spec in signal', spec, signal);
-    if ('transform' in spec) {
-      var field;
-      var transformed = JSON.stringify(spec.transform);
-      var regex = /(?<=(toString\(datum\[))'(.*?)'/;
-      var matches = transformed.match(regex);
-      if (matches) {
-        field = matches[2];
-        console.log('matches', matches, field);
-        return '`' + field + "`.str.contains('" + signal + "',case=False,na=False)";
-      }
-    }
-    // matches the column name that is targeted by the input element
-    console.log('view', view);
-
-    /*
-    return datumStringConstructor.push(`${key.toString()}==${encodeValueAsString(datum[key])}`);*/
-
-    return '';
-  }
-
-  // ordinal interval:
-  // selection = {u:[3,4,5]} // ie all selected values
-
-  // quant interval:
-  // selection = {u:[3.2,5.3222222]} // ie bounds
-
-  // TODO:
-  // if point selection
-  // select all of the fields on the data value
-}
-
-function createQueryFromData(data) {
-  var stringConstructor = [];
-  var _iterator3 = _createForOfIteratorHelper(data),
-    _step3;
-  try {
-    for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
-      var datum = _step3.value;
-      var datumStringConstructor = [];
-      var keys = Object.keys(datum);
-      for (var _i = 0, _keys = keys; _i < _keys.length; _i++) {
-        var _key = _keys[_i];
-        datumStringConstructor.push("".concat(_key.toString(), "==").concat(encodeValueAsString(datum[_key])));
-      }
-      stringConstructor.push('(' + datumStringConstructor.join(' and ') + ')');
-    }
-  } catch (err) {
-    _iterator3.e(err);
-  } finally {
-    _iterator3.f();
-  }
-  return '(' + stringConstructor.join(' or ') + ')';
+    console.log('in new string', signal);
+  } else {
+    console.log('what is this signal', signal, selectionInstances);
+  }*/
+  console.log('queries!', queries);
+  return queries;
 }
 function createQueryFromCategoricalInterval(field, data) {
-  var stringConstructor = [];
-  var _iterator4 = _createForOfIteratorHelper(data),
-    _step4;
-  try {
-    for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
-      var datum = _step4.value;
-      stringConstructor.push("`".concat(field.toString(), "`==").concat(encodeValueAsString(datum)));
-    }
-  } catch (err) {
-    _iterator4.e(err);
-  } finally {
-    _iterator4.f();
-  }
-  return ' (' + stringConstructor.join(' or ') + ') ';
+  var arrayConstructor = data.map(encodeValueAsString);
+  return " ".concat(field, " in [").concat(arrayConstructor.join(','), "] ");
 }
 function createQueryFromBounds(fieldName, lowerBound, upperBound) {
   return " (".concat(fieldName, ">=").concat(lowerBound.toFixed(2), " and ").concat(fieldName, "<=").concat(upperBound.toFixed(2), ") ");

@@ -5104,7 +5104,8 @@
                 recurse: true
               });
               // as selections store their data in a dataset with the suffix "*_store", find those selections
-              const selectionNames = Object.keys(data).filter(key => key.includes('_store')).map(key => key.replace('_store', '')).concat(Object.keys(signals).filter(key => key.includes('ALX')));
+              const unprocessedSelectionNames = Object.keys(data).filter(key => key.endsWith('_store')).map(key => key.replace('_store', '')).concat(Object.keys(signals).filter(key => key.includes('ALX')));
+              const selectionNames = [...new Set(unprocessedSelectionNames)];
               const queries = {
                 group: [],
                 filter: []
@@ -5119,10 +5120,11 @@
                     if (group !== '') {
                       queries.group.push(group);
                     }
-                  } else if (selection.endsWith('FILTER')) {
-                    const query = createQueryFromSelectionName(selection, view, spec) || '';
-                    if (query !== '') {
-                      queries.filter.push(query);
+                  }
+                  if (selection.endsWith('FILTER')) {
+                    const query = createQueryFromSelectionName(selection, view, spec) || null;
+                    if (query) {
+                      queries.filter = queries.filter.concat(query);
                     }
                   }
                 }
@@ -5130,14 +5132,9 @@
               console.log('post query!', queries);
               const filter_text = `df.query("${queries['filter'].join(' and ')}")
           `;
-              const group_text = queries['group'].join(`
-          `);
               let text = '';
               if (queries['filter'].length > 0) {
                 text += filter_text;
-              }
-              if (queries['group'].length > 0) {
-                text += group_text;
               }
               if (text.length > 0) {
                 var _event$clipboardData4, _event$clipboardData6;
@@ -5201,16 +5198,6 @@
         embedOptions: opts
       };
     }
-    function cleanVegaProperties(source, vgsidData) {
-      const keys = Object.keys(source[0]);
-      return keepKeys(vgsidData, keys);
-    }
-    function keepKeys(array, keysToKeep) {
-      return array.map(o => keysToKeep.reduce((acc, curr) => {
-        acc[curr] = o[curr];
-        return acc;
-      }, {}));
-    }
     function createGroupFromSelectionName(selectionName, view) {
       let query = '';
       const signal = view.signal(selectionName);
@@ -5231,125 +5218,133 @@ df.groupby("ALX_GROUP").mean(numeric_only=True)
       }
       return query;
     }
-    function createQueryFromSelectionName(selectionName, view) {
-      let spec = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
-      const signal = view.signal(selectionName);
-      console.log('signal', signal, 'spec', spec);
-      if (typeof signal == 'object') {
-        if ('vlPoint' in signal) {
-          const selection = signal['vlPoint'];
-          console.log('selection', selection);
-          const vgsidToSelect = selection['or'].map(item => item._vgsid_).filter(item => item);
-          const sourceName = 'source_0';
-          const dataName = 'data_0';
-          console.log('selection', vgsidToSelect, selection['or'].map(item => item._vgsid_));
-          let query = '';
-          if (vgsidToSelect.length > 0) {
-            console.log('in vgsid');
-            const source = view.data(sourceName);
+    function findObjectByKeyValuePair(obj, key, value) {
+      let ignoreList = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : [];
+      // Check if the key-value pair exists in the current object
+      if (obj && obj[key] === value) {
+        return obj;
+      }
 
-            // if selection uses vgsids, select corresponding data points
-            const data = view.data(dataName);
-            console.log('data', data);
-            const selectedItems = cleanVegaProperties(source, data.filter(datum => vgsidToSelect.includes(datum._vgsid_)));
-            query = createQueryFromData(selectedItems);
-          } else {
-            // else access data query directly
-            query = createQueryFromData(selection['or']);
-          }
-          return query;
-        }
-
-        // after selecting an item create filter
-      } else if (Array.isArray(signal)) {
-        console.log('in interval', signal);
-        // interval selection
-        // TODO: account for interval selection on ordinal
-
-        //const selectionTuple = view.signal(selectionName + '_tuple_fields');
-        let queries = [];
-
-        // top level of _store object corresponds with the # of the selection (ie multi brush), this should typically be of length 1
-        const selectionInstances = view.data(selectionName + '_store');
-        for (const selection of selectionInstances) {
-          // if field is
-          for (const fieldIndex in selection.fields) {
-            const field = selection.fields[fieldIndex];
-            if (field.type == 'E') {
-              // ordinal and nominal interval selections
-
-              selectionInstances.map(selectionInstance => {
-                const fieldName = field.field;
-                // todo, make this
-                const categoricalValues = selectionInstance.values[fieldIndex];
-                queries.push(createQueryFromCategoricalInterval(fieldName, categoricalValues));
-              });
-            } else {
-              // quantitative interval selections
-              selectionInstances.map(selectionInstance => {
-                selectionInstance.fields[fieldIndex].field;
-                const fieldName = field.field;
-                const bounds = selectionInstance.values[fieldIndex].sort(function (a, b) {
-                  return a - b;
-                });
-                const [lowerBound, upperBound] = bounds;
-                queries.push(createQueryFromBounds(fieldName, lowerBound, upperBound));
-              });
+      // Loop through all the properties of the object
+      for (let prop in obj) {
+        if (obj.hasOwnProperty(prop)) {
+          // Recursively search through any nested objects
+          if (typeof obj[prop] === 'object' && !ignoreList.includes(prop)) {
+            const result = findObjectByKeyValuePair(obj[prop], key, value, ignoreList);
+            if (result) {
+              return result;
             }
           }
         }
-        return queries.join(' and ');
-      } else if (vegaImport.isString(signal)) {
-        console.log('vis spec in signal', spec, signal);
-        if ('transform' in spec) {
-          let field;
-          const transformed = JSON.stringify(spec.transform);
-          const regex = /(?<=(toString\(datum\[))'(.*?)'/;
-          const matches = transformed.match(regex);
-          if (matches) {
-            field = matches[2];
-            console.log('matches', matches, field);
-            return '`' + field + "`.str.contains('" + signal + "',case=False,na=False)";
+      }
+
+      // If the key-value pair was not found, return null
+      return null;
+    }
+    function findSelectionFromSpec(selectionName, spec) {
+      console.log('finding spec', selectionName, spec);
+      // recurse through all of an object search for a params property
+      const selection = findObjectByKeyValuePair(spec, 'name', selectionName, ['data', 'datasets']);
+      console.log('found selection from spec', selection);
+      return selection;
+    }
+    function createQueryFromSelectionName(selectionName, view) {
+      let spec = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+      const selection = findSelectionFromSpec(selectionName, spec);
+      const queries = [];
+      if (selection) {
+        console.log('in selection');
+        const selectionType = selection.select.type;
+        if (selectionType == 'point') {
+          const selectionInstances = view.data(selectionName + '_store');
+          console.log('in point instances!', selectionInstances);
+          const signal = view.signal(selectionName);
+          console.log('in point signal!', signal);
+          const keys = Object.keys(signal);
+          for (const key of keys) {
+            if (key !== 'vlPoint') {
+              const arrayConstructor = signal[key].map(encodeValueAsString);
+              queries.push(` ${key} in [${arrayConstructor.join(',')}]`);
+            }
+          }
+          console.log('past pushed point queries', queries);
+        } else if (selectionType == 'interval') {
+          // grab the dataseta that selection is stored in
+          const selectionInstances = view.data(selectionName + '_store');
+          for (const selection of selectionInstances) {
+            // if field is
+            for (const fieldIndex in selection.fields) {
+              const field = selection.fields[fieldIndex];
+              if (field.type == 'E') {
+                // ordinal and nominal interval selections
+
+                selectionInstances.map(selectionInstance => {
+                  const fieldName = field.field;
+                  // todo, make this
+                  const categoricalValues = selectionInstance.values[fieldIndex];
+                  const query = createQueryFromCategoricalInterval(fieldName, categoricalValues);
+                  console.log('categorical interval', query);
+                  queries.push(query);
+                });
+              } else {
+                // quantitative interval selections
+                selectionInstances.map(selectionInstance => {
+                  selectionInstance.fields[fieldIndex].field;
+                  const fieldName = field.field;
+                  const bounds = selectionInstance.values[fieldIndex].sort(function (a, b) {
+                    return a - b;
+                  });
+                  const [lowerBound, upperBound] = bounds;
+                  queries.push(createQueryFromBounds(fieldName, lowerBound, upperBound));
+                });
+              }
+            }
           }
         }
-        // matches the column name that is targeted by the input element
-        console.log('view', view);
-
-        /*
-        return datumStringConstructor.push(`${key.toString()}==${encodeValueAsString(datum[key])}`);*/
-
-        return '';
+        // if point,
+        // access data directly,
+        // if interval
+        //
       }
-
-      // ordinal interval:
-      // selection = {u:[3,4,5]} // ie all selected values
-
-      // quant interval:
-      // selection = {u:[3.2,5.3222222]} // ie bounds
-
-      // TODO:
-      // if point selection
-      // select all of the fields on the data value
-    }
-
-    function createQueryFromData(data) {
-      let stringConstructor = [];
-      for (const datum of data) {
-        let datumStringConstructor = [];
-        const keys = Object.keys(datum);
-        for (const key of keys) {
-          datumStringConstructor.push(`${key.toString()}==${encodeValueAsString(datum[key])}`);
+      /*
+      const signal = view.signal(selectionName);
+      const selectionInstances = view.data(selectionName + '_store');
+       const filters: Filter[] = [];
+      console.log('selection instance', selectionInstances);
+      console.log('signal is type:', typeof signal, signal);
+       if (typeof signal == 'object') {
+        // for point selections
+        // numerical and categorical point selections
+        // numerical and categorical interval selections
+        if ('vlPoint' in signal) {
+          const keys = Object.keys(signal);
+          for (const key of keys) {
+            if (key !== 'vlPoint') {
+              filters.push({columnName: key, values: signal[key], type: 'Categorical'} as CategoricalFilter);
+            }
+          }
+        } else {
+          const keys = Object.keys(signal);
+          for (const key of keys) {
+            if (key !== 'vlPoint') {
+              filters.push({columnName: key, values: signal[key], type: 'Categorical'} as CategoricalFilter);
+            }
+          }
         }
-        stringConstructor.push('(' + datumStringConstructor.join(' and ') + ')');
-      }
-      return '(' + stringConstructor.join(' or ') + ')';
+      } else if (Array.isArray(signal)) {
+        // or
+        console.log('in new array', signal);
+      } else if (isString(signal)) {
+        console.log('in new string', signal);
+      } else {
+        console.log('what is this signal', signal, selectionInstances);
+      }*/
+      console.log('queries!', queries);
+      return queries;
     }
     function createQueryFromCategoricalInterval(field, data) {
-      let stringConstructor = [];
-      for (const datum of data) {
-        stringConstructor.push(`\`${field.toString()}\`==${encodeValueAsString(datum)}`);
-      }
-      return ' (' + stringConstructor.join(' or ') + ') ';
+      const arrayConstructor = data.map(encodeValueAsString);
+      return ` ${field} in [${arrayConstructor.join(',')}] `;
     }
     function createQueryFromBounds(fieldName, lowerBound, upperBound) {
       return ` (${fieldName}>=${lowerBound.toFixed(2)} and ${fieldName}<=${upperBound.toFixed(2)}) `;

@@ -314,6 +314,19 @@ function getRoot(el: Element) {
     ? {root: possibleRoot, rootContainer: possibleRoot}
     : {root: document, rootContainer: document.head ?? document.body};
 }
+type Operator = '==' | '>=' | '<=' | '>' | '<';
+interface NumericalFilter {
+  operator: Operator;
+  columnName: string;
+  value: number;
+  type: 'Numerical';
+}
+interface CategoricalFilter {
+  columnName: string;
+  values: (number | string)[];
+  type: 'Categorical';
+}
+type Filter = NumericalFilter | CategoricalFilter;
 
 async function _embed(
   el: HTMLElement | string,
@@ -605,21 +618,6 @@ async function _embed(
           return columns;
         }
 
-        type Operator = '==' | '>=' | '<=' | '>' | '<';
-        interface NumericalFilter {
-          operator: Operator;
-          columnName: string;
-          value: number;
-          type: 'Numerical';
-        }
-        interface CategoricalFilter {
-          operator: Operator;
-          columnName: string;
-          value: string;
-          type: 'Categorical';
-        }
-        type Filter = NumericalFilter | CategoricalFilter;
-
         function pasteSelection(paste: any) {
           console.log('selection', paste);
           console.log('pasted text', paste);
@@ -785,21 +783,20 @@ async function _embed(
         const copyText = function (event?: ClipboardEvent) {
           const {data, signals} = view.getState({data: vega.truthy, signals: vega.truthy, recurse: true});
           // as selections store their data in a dataset with the suffix "*_store", find those selections
-          const selectionNames = Object.keys(data)
-            .filter((key) => key.includes('_store'))
+          const unprocessedSelectionNames = Object.keys(data)
+            .filter((key) => key.endsWith('_store'))
             .map((key) => key.replace('_store', ''))
             .concat(Object.keys(signals).filter((key) => key.includes('ALX')));
 
+          const selectionNames = [...new Set(unprocessedSelectionNames)];
           const queries: Record<string, string[]> = {
             group: [],
             filter: []
           };
 
           console.log('selectionNames', selectionNames);
-
           for (const selection of selectionNames) {
             if (!selection.includes('ALX')) continue;
-
             const signal = view.signal(selection);
 
             if (signal) {
@@ -808,10 +805,11 @@ async function _embed(
                 if (group !== '') {
                   queries.group.push(group);
                 }
-              } else if (selection.endsWith('FILTER')) {
-                const query = createQueryFromSelectionName(selection, view, spec) || '';
-                if (query !== '') {
-                  queries.filter.push(query);
+              }
+              if (selection.endsWith('FILTER')) {
+                const query = createQueryFromSelectionName(selection, view, spec) || null;
+                if (query) {
+                  queries.filter = queries.filter.concat(query);
                 }
               }
             }
@@ -821,17 +819,10 @@ async function _embed(
           const filter_text = `df.query("${queries['filter'].join(' and ')}")
           `;
 
-          const group_text = queries['group'].join(`
-          `);
-
           let text = '';
 
           if (queries['filter'].length > 0) {
             text += filter_text;
-          }
-
-          if (queries['group'].length > 0) {
-            text += group_text;
           }
 
           if (text.length > 0) {
@@ -938,7 +929,138 @@ df.groupby("ALX_GROUP").mean(numeric_only=True)
   return query;
 }
 
+function findObjectByKeyValuePair(obj: Record<any, any>, key: string, value: string, ignoreList: string[] = []): any {
+  // Check if the key-value pair exists in the current object
+  if (obj && obj[key] === value) {
+    return obj;
+  }
+
+  // Loop through all the properties of the object
+  for (let prop in obj) {
+    if (obj.hasOwnProperty(prop)) {
+      // Recursively search through any nested objects
+      if (typeof obj[prop] === 'object' && !ignoreList.includes(prop)) {
+        const result = findObjectByKeyValuePair(obj[prop], key, value, ignoreList);
+        if (result) {
+          return result;
+        }
+      }
+    }
+  }
+
+  // If the key-value pair was not found, return null
+  return null;
+}
+function findSelectionFromSpec(selectionName: string, spec: VisualizationSpec): any {
+  console.log('finding spec', selectionName, spec);
+  // recurse through all of an object search for a params property
+  const selection = findObjectByKeyValuePair(spec, 'name', selectionName, ['data', 'datasets']);
+  console.log('found selection from spec', selection);
+  return selection;
+}
+
 function createQueryFromSelectionName(selectionName: string, view: View, spec: VisualizationSpec = {}) {
+  const selection = findSelectionFromSpec(selectionName, spec);
+
+  const queries: string[] = [];
+  if (selection) {
+    console.log('in selection');
+    const selectionType = selection.select.type;
+    if (selectionType == 'point') {
+      const selectionInstances = view.data(selectionName + '_store');
+      console.log('in point instances!', selectionInstances);
+
+      const signal = view.signal(selectionName);
+      console.log('in point signal!', signal);
+
+      const keys = Object.keys(signal);
+      for (const key of keys) {
+        if (key !== 'vlPoint') {
+          const arrayConstructor = signal[key].map(encodeValueAsString);
+          queries.push(` ${key} in [${arrayConstructor.join(',')}]`);
+        }
+      }
+      console.log('past pushed point queries', queries);
+    } else if (selectionType == 'interval') {
+      // grab the dataseta that selection is stored in
+      const selectionInstances = view.data(selectionName + '_store');
+      for (const selection of selectionInstances) {
+        // if field is
+        for (const fieldIndex in selection.fields) {
+          const field = selection.fields[fieldIndex];
+          if (field.type == 'E') {
+            // ordinal and nominal interval selections
+
+            selectionInstances.map((selectionInstance) => {
+              const fieldName = field.field;
+              // todo, make this
+              const categoricalValues = selectionInstance.values[fieldIndex];
+
+              const query = createQueryFromCategoricalInterval(fieldName, categoricalValues);
+              console.log('categorical interval', query);
+              queries.push(query);
+            });
+          } else {
+            // quantitative interval selections
+            selectionInstances.map((selectionInstance) => {
+              selectionInstance.fields[fieldIndex].field;
+              const fieldName = field.field;
+              const bounds = selectionInstance.values[fieldIndex].sort(function (a: number, b: number) {
+                return a - b;
+              });
+              const [lowerBound, upperBound] = bounds;
+
+              queries.push(createQueryFromBounds(fieldName, lowerBound, upperBound));
+            });
+          }
+        }
+      }
+    }
+    // if point,
+    // access data directly,
+    // if interval
+    //
+  }
+  /*
+  const signal = view.signal(selectionName);
+  const selectionInstances = view.data(selectionName + '_store');
+
+  const filters: Filter[] = [];
+  console.log('selection instance', selectionInstances);
+  console.log('signal is type:', typeof signal, signal);
+
+  if (typeof signal == 'object') {
+    // for point selections
+    // numerical and categorical point selections
+    // numerical and categorical interval selections
+    if ('vlPoint' in signal) {
+      const keys = Object.keys(signal);
+      for (const key of keys) {
+        if (key !== 'vlPoint') {
+          filters.push({columnName: key, values: signal[key], type: 'Categorical'} as CategoricalFilter);
+        }
+      }
+    } else {
+      const keys = Object.keys(signal);
+      for (const key of keys) {
+        if (key !== 'vlPoint') {
+          filters.push({columnName: key, values: signal[key], type: 'Categorical'} as CategoricalFilter);
+        }
+      }
+    }
+  } else if (Array.isArray(signal)) {
+    // or
+    console.log('in new array', signal);
+  } else if (isString(signal)) {
+    console.log('in new string', signal);
+  } else {
+    console.log('what is this signal', signal, selectionInstances);
+  }*/
+  console.log('queries!', queries);
+  return queries;
+}
+
+function oldCreateQueryFromSelectionName(selectionName: string, view: View, spec: VisualizationSpec = {}) {
   const signal = view.signal(selectionName);
   console.log('signal', signal, 'spec', spec);
   if (typeof signal == 'object') {
@@ -977,10 +1099,10 @@ function createQueryFromSelectionName(selectionName: string, view: View, spec: V
         // else access data query directly
         query = createQueryFromData(selection['or']);
       }
-
       return query;
+    } else {
+      console.log('in object but not full point');
     }
-
     // after selecting an item create filter
   } else if (Array.isArray(signal)) {
     console.log('in interval', signal);
@@ -990,6 +1112,7 @@ function createQueryFromSelectionName(selectionName: string, view: View, spec: V
     //const selectionTuple = view.signal(selectionName + '_tuple_fields');
     let queries: string[] = [];
 
+    console.log();
     // top level of _store object corresponds with the # of the selection (ie multi brush), this should typically be of length 1
     const selectionInstances = view.data(selectionName + '_store');
 
@@ -1044,6 +1167,8 @@ function createQueryFromSelectionName(selectionName: string, view: View, spec: V
     return datumStringConstructor.push(`${key.toString()}==${encodeValueAsString(datum[key])}`);*/
 
     return '';
+  } else {
+    console.log('other type of sel', signal, selectionName);
   }
 
   // ordinal interval:
@@ -1056,7 +1181,6 @@ function createQueryFromSelectionName(selectionName: string, view: View, spec: V
   // if point selection
   // select all of the fields on the data value
 }
-
 function createQueryFromData(data: any[]) {
   let stringConstructor: string[] = [];
   for (const datum of data) {
@@ -1071,11 +1195,9 @@ function createQueryFromData(data: any[]) {
 }
 
 function createQueryFromCategoricalInterval(field: string, data: string[]) {
-  let stringConstructor: string[] = [];
-  for (const datum of data) {
-    stringConstructor.push(`\`${field.toString()}\`==${encodeValueAsString(datum)}`);
-  }
-  return ' (' + stringConstructor.join(' or ') + ') ';
+  const arrayConstructor = data.map(encodeValueAsString);
+
+  return ` ${field} in [${arrayConstructor.join(',')}] `;
 }
 
 function createQueryFromBounds(fieldName: string, lowerBound: number, upperBound: number) {
