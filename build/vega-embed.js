@@ -4930,6 +4930,31 @@
 
         if (mode == 'vega-lite' || actions === true || actions.copySelection !== false) {
           if (actions !== true) {
+            var _container;
+            console.log('about to set view to window');
+            if (window && (_container = container) !== null && _container !== void 0 && _container.parentElement) {
+              const altairId = container.parentElement.id;
+              if (altairId && altairId.startsWith('altair-viz')) {
+                var _window;
+                //@ts-ignore
+                if (!((_window = window) !== null && _window !== void 0 && _window.vega_views)) {
+                  //@ts-ignore
+                  window.vega_views = {};
+                }
+                //@ts-ignore
+                window['vega_views'][altairId] = view;
+              } else {
+                console.log('no alt id', view);
+                //@ts-ignore
+                //@ts-ignore
+                /*if (!window?.vega_views) {
+                  //@ts-ignore
+                  window.vega_views = {};
+                }
+                //@ts-ignore
+                window['vega_views']['alt-via'] = view;*/
+              }
+            }
             // add
             // if clicked on and haven't clicked on anything else
             // if a copy event fires and the container is clicked, copy the selection
@@ -5014,6 +5039,7 @@
               }
                console.log('setting selection', signalValue);
                */
+
               const {
                 data
               } = view.getState({
@@ -5043,7 +5069,6 @@
             }
 
             view.addEventListener('mousedown', function (event) {
-              console.log('setting current clicked pre', currentClicked);
               currentClicked = (command, event) => {
                 if (command === KEYBOARD_ACTIONS.COPY) {
                   console.log(view.signal);
@@ -5054,9 +5079,7 @@
                   console.log('copied selection!', selection);
                   pasteSelection(selection);
                 }
-                console.log('current click ran');
               };
-              console.log('setting current clicked after', currentClicked);
               event.preventDefault();
               event.stopPropagation();
             });
@@ -5130,9 +5153,14 @@
                 }
               }
               console.log('post query!', queries);
+              let text = '';
+              const group_text = queries['group'].join(`
+          `);
+              if (queries['group'].length > 0) {
+                text += group_text;
+              }
               const filter_text = `df.query("${queries['filter'].join(' and ')}")
           `;
-              let text = '';
               if (queries['filter'].length > 0) {
                 text += filter_text;
               }
@@ -5152,12 +5180,12 @@
                 console.log('signals', view.getState().signals);
                 const selname = selectionNames.find(name => name.includes('ALX'));
                 if (selname) {
-                  console.log('selname', selname);
+                  console.log('in-selname!', selname);
                   if (!selname.includes('query')) {
                     var _event$clipboardData5;
                     // selections bound to input elements don't store data in a dataset.
                     const data = view.data(selname + '_store');
-                    console.log('datas', data);
+                    console.log('in-copying!', data);
                     event === null || event === void 0 ? void 0 : (_event$clipboardData5 = event.clipboardData) === null || _event$clipboardData5 === void 0 ? void 0 : _event$clipboardData5.setData('web text/custom', JSON.stringify(data));
                   }
                 }

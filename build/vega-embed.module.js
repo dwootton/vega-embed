@@ -2990,9 +2990,12 @@ function _embed3() {
       _opts$editorUrl,
       editorUrl,
       editorLink,
+      _container,
       pasteSelection,
       animateCopy,
       animatePaste,
+      altairId,
+      _window,
       copyAlert,
       COPY_ALERT_ID,
       pandasLink,
@@ -3322,6 +3325,7 @@ function _embed3() {
                     }
                      console.log('setting selection', signalValue);
                      */
+
                     var _view$getState = view.getState({
                         data: vega.truthy,
                         signals: vega.falsy,
@@ -3379,6 +3383,29 @@ function _embed3() {
                       iterations: 1
                     });
                   };
+                  console.log('about to set view to window');
+                  if (window && (_container = container) !== null && _container !== void 0 && _container.parentElement) {
+                    altairId = container.parentElement.id;
+                    if (altairId && altairId.startsWith('altair-viz')) {
+                      //@ts-ignore
+                      if (!((_window = window) !== null && _window !== void 0 && _window.vega_views)) {
+                        //@ts-ignore
+                        window.vega_views = {};
+                      }
+                      //@ts-ignore
+                      window['vega_views'][altairId] = view;
+                    } else {
+                      console.log('no alt id', view);
+                      //@ts-ignore
+                      //@ts-ignore
+                      /*if (!window?.vega_views) {
+                        //@ts-ignore
+                        window.vega_views = {};
+                      }
+                      //@ts-ignore
+                      window['vega_views']['alt-via'] = view;*/
+                    }
+                  }
                   // add
                   // if clicked on and haven't clicked on anything else
                   // if a copy event fires and the container is clicked, copy the selection
@@ -3396,7 +3423,6 @@ function _embed3() {
                   copyAlert.style.textAlign = 'center';
                   element.appendChild(copyAlert);
                   view.addEventListener('mousedown', function (event) {
-                    console.log('setting current clicked pre', currentClicked);
                     currentClicked = (command, event) => {
                       if (command === KEYBOARD_ACTIONS.COPY) {
                         console.log(view.signal);
@@ -3407,9 +3433,7 @@ function _embed3() {
                         console.log('copied selection!', selection);
                         pasteSelection(selection);
                       }
-                      console.log('current click ran');
                     };
-                    console.log('setting current clicked after', currentClicked);
                     event.preventDefault();
                     event.stopPropagation();
                   });
@@ -3452,8 +3476,12 @@ function _embed3() {
                       }
                     }
                     console.log('post query!', queries);
-                    var filter_text = "df.query(\"".concat(queries['filter'].join(' and '), "\")\n          ");
                     var text = '';
+                    var group_text = queries['group'].join("\n          ");
+                    if (queries['group'].length > 0) {
+                      text += group_text;
+                    }
+                    var filter_text = "df.query(\"".concat(queries['filter'].join(' and '), "\")\n          ");
                     if (queries['filter'].length > 0) {
                       text += filter_text;
                     }
@@ -3473,12 +3501,12 @@ function _embed3() {
                       console.log('signals', view.getState().signals);
                       var selname = selectionNames.find(name => name.includes('ALX'));
                       if (selname) {
-                        console.log('selname', selname);
+                        console.log('in-selname!', selname);
                         if (!selname.includes('query')) {
                           var _event$clipboardData5;
                           // selections bound to input elements don't store data in a dataset.
                           var _data = view.data(selname + '_store');
-                          console.log('datas', _data);
+                          console.log('in-copying!', _data);
                           event === null || event === void 0 ? void 0 : (_event$clipboardData5 = event.clipboardData) === null || _event$clipboardData5 === void 0 ? void 0 : _event$clipboardData5.setData('web text/custom', JSON.stringify(_data));
                         }
                       }
