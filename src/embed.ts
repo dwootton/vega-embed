@@ -3,6 +3,7 @@ import stringify from 'json-stringify-pretty-compact';
 // need this import because of https://github.com/npm/node-semver/issues/381
 import satisfies from 'semver/functions/satisfies';
 import * as vegaImport from 'vega';
+import Elements from './custom-components';
 import {
   AutoSize,
   Config as VgConfig,
@@ -579,6 +580,43 @@ async function _embed(
     }
 
     // search through each dataset with _store ending, get selection names
+    if (mode == 'vega-lite') {
+      function deepSearchItems(object: any, key: any, predicate: any, parent: any = null) {
+        let ret: any = [];
+        if (object.hasOwnProperty(key) && predicate(key, object[key]) === true) {
+          ret = [...ret, parent];
+        }
+        if (Object.keys(object).length) {
+          for (let i = 0; i < Object.keys(object).length; i++) {
+            let value = object[Object.keys(object)[i]];
+            if (typeof value === 'object' && value != null) {
+              let o = deepSearchItems(object[Object.keys(object)[i]], key, predicate, object);
+              if (o != null && o instanceof Array) {
+                ret = [...ret, ...o];
+              }
+            }
+          }
+        }
+        return ret;
+      }
+      const customElements = deepSearchItems(
+        spec,
+        'element',
+        (key: string, value: any) => key == 'element' && value.includes('custom')
+      );
+      for (const customElement of customElements) {
+        if (customElement.bind.element == 'custom-dropdown') {
+          const custom = document.createElement('min-max-slider');
+          console.log('custom elements', Elements);
+          console.log('custom minmax element', custom);
+          //const shadowRoot = custom.attachShadow({mode: 'open'});
+          //shadowRoot.innerHTML = '<h1>Hello Shadow DOM</h1>';
+          container.appendChild(custom);
+        }
+      }
+
+      console.log('found custom elements!', customElements);
+    }
 
     if (mode == 'vega-lite' || actions === true || actions.copySelection !== false) {
       if (actions !== true) {
@@ -994,19 +1032,21 @@ function createQueryFromSelectionName(selectionName: string, view: View, spec: V
 
   const queries: string[] = [];
   if (selection) {
-    console.log('in selection');
     const selectionType = selection.select.type;
     if (selectionType == 'point') {
       const selectionInstances = view.data(selectionName + '_store');
-      console.log('in point instances!', selectionInstances);
 
       const signal = view.signal(selectionName);
-      console.log('in point signal!', signal);
 
       const keys = Object.keys(signal);
       for (const key of keys) {
         if (key !== 'vlPoint') {
-          const arrayConstructor = signal[key].map(encodeValueAsString);
+          let signalValue = signal[key];
+          if (signalValue instanceof Set) {
+            // becomes a javascript Set {vsidNum} if key is vgsid
+            signalValue = Array.from(signalValue);
+          }
+          const arrayConstructor = signalValue.map(encodeValueAsString);
           queries.push(` ${key} in [${arrayConstructor.join(',')}]`);
         }
       }

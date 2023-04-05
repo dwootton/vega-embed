@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vega-Embed for Vega-Lite</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+    <script src="build/vega-embed.js"></script>
+  </head>
+
+  <body>
+    <div id="vis"></div>
+    <script>
+      async function run() {
+        //// http://[::]:8081/test-vl-interval-select-ordinal.html#
+        const config = {
+          // default view background color
+          // covers the entire view component
+          background: "#efefef",
+          axis: {
+            labelFont: "serif",
+            labelFontSize: 16,
+            tickWidth: 3,
+            tickColor: "red"
+          }
+        };
+
+        const spec = {
+          data: { url: "data/movies.json" },
+          config: { view: { continuousWidth: 400, continuousHeight: 300 } },
+          mark: { type: "point", filled: true },
+          encoding: {
+            tooltip: { field: "Title", type: "nominal" },
+            x: {
+              field: "Worldwide_Gross",
+              scale: { clamp: true, domain: [100000, 1000000000] },
+              type: "quantitative"
+            },
+            y: { field: "IMDB_Rating", type: "quantitative" }
+          },
+          height: 200,
+          params: [
+            {
+              name: "param_3",
+              select: { type: "point", fields: ["Major_Genre"] },
+              bind: { element: "custom-dropdown" }
+            }
+          ],
+          title: "Dropdown Filtering",
+          transform: [
+            { calculate: "floor(datum.IMDB_Rating)", as: "Rounded_IMDB_Rating" },
+            {
+              calculate: "datum.Production_Budget > 100000000.0 ? 100 : 10",
+              as: "Hundred_Million_Production"
+            },
+            { calculate: "year(datum.Release_Date)", as: "Release_Year" },
+          ],
+          width: 200,
+          $schema: "https://vega.github.io/schema/vega-lite/v5.2.0.json"
+        };
+
+        const result = await vegaEmbed("#vis", spec, {
+          config: config,
+          tooltip: { theme: "dark" }
+        });
+
+        console.log(result);
+      }
+      run();
+    </script>
+  </body>
+</html>

@@ -2,6 +2,7 @@ import { applyPatch } from 'fast-json-patch';
 import stringify from 'json-stringify-pretty-compact';
 import * as vegaImport from 'vega';
 import { writeConfig, mergeConfig, isString, isBoolean } from 'vega';
+import '@wcd/dwootton.preact-lfa03675';
 import { expressionInterpreter } from 'vega-interpreter';
 import * as vegaLiteImport from 'vega-lite';
 import schemaParser from 'vega-schema-url-parser';
@@ -2487,6 +2488,32 @@ var satisfies = (version, range, options) => {
 };
 var satisfies_1 = satisfies;
 
+var template = document.createElement('template');
+template.innerHTML = "\n<div>\n<span>hi there!</span>\n<dual-slider min=0 max=100 onChange=validate></dual-slider>\n\n</div>\n";
+//console.log('rendering custom component', Slider);
+class MinMaxSlider extends HTMLElement {
+  constructor() {
+    console.log('constructor!');
+    super();
+    var shadowRoot = this.attachShadow({
+      mode: 'closed'
+    });
+    console.log('shadow rooting!');
+    // let div = document. createElement ('div');
+    // div.textContent = 'Big Bang Theory';
+    // • shadowRoot.append(div);
+    console.log('template', template, template.content, template.innerHTML);
+    var clone = template.content.cloneNode(true);
+    shadowRoot.append(clone);
+  }
+  connectedCallback() {}
+}
+var Elements = [{
+  name: 'min-max-slider',
+  class: MinMaxSlider
+}];
+customElements.define('min-max-slider', MinMaxSlider);
+
 /**
  * Open editor url in a new window, and pass a message.
  */
@@ -2605,6 +2632,15 @@ var peerDependencies = {
   "vega-lite": "*"
 };
 var dependencies = {
+  "@babel/plugin-proposal-decorators": "^7.21.0",
+  "@babel/plugin-syntax-decorators": "^7.21.0",
+  "@spectrum-css/button": "^9.0.8",
+  "@spectrum-css/icon": "^3.0.35",
+  "@spectrum-css/page": "^5.0.19",
+  "@spectrum-css/typography": "^4.0.29",
+  "@spectrum-css/vars": "^8.0.5",
+  "@spectrum-web-components/slider": "^0.15.8",
+  "@wcd/dwootton.preact-lfa03675": "^0.0.4",
   "fast-json-patch": "^3.1.1",
   "json-stringify-pretty-compact": "^3.0.0",
   semver: "^7.3.8",
@@ -2990,6 +3026,12 @@ function _embed3() {
       _opts$editorUrl,
       editorUrl,
       editorLink,
+      deepSearchItems,
+      customElements,
+      _iterator6,
+      _step6,
+      customElement,
+      custom,
       _container,
       pasteSelection,
       animateCopy,
@@ -3254,7 +3296,47 @@ function _embed3() {
               }
 
               // search through each dataset with _store ending, get selection names
-
+              if (mode == 'vega-lite') {
+                deepSearchItems = function deepSearchItems(object, key, predicate) {
+                  var parent = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
+                  var ret = [];
+                  if (object.hasOwnProperty(key) && predicate(key, object[key]) === true) {
+                    ret = [...ret, parent];
+                  }
+                  if (Object.keys(object).length) {
+                    for (var i = 0; i < Object.keys(object).length; i++) {
+                      var value = object[Object.keys(object)[i]];
+                      if (typeof value === 'object' && value != null) {
+                        var o = deepSearchItems(object[Object.keys(object)[i]], key, predicate, object);
+                        if (o != null && o instanceof Array) {
+                          ret = [...ret, ...o];
+                        }
+                      }
+                    }
+                  }
+                  return ret;
+                };
+                customElements = deepSearchItems(spec, 'element', (key, value) => key == 'element' && value.includes('custom'));
+                _iterator6 = _createForOfIteratorHelper(customElements);
+                try {
+                  for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
+                    customElement = _step6.value;
+                    if (customElement.bind.element == 'custom-dropdown') {
+                      custom = document.createElement('min-max-slider');
+                      console.log('custom elements', Elements);
+                      console.log('custom minmax element', custom);
+                      //const shadowRoot = custom.attachShadow({mode: 'open'});
+                      //shadowRoot.innerHTML = '<h1>Hello Shadow DOM</h1>';
+                      container.appendChild(custom);
+                    }
+                  }
+                } catch (err) {
+                  _iterator6.e(err);
+                } finally {
+                  _iterator6.f();
+                }
+                console.log('found custom elements!', customElements);
+              }
               if (mode == 'vega-lite' || actions === true || actions.copySelection !== false) {
                 if (actions !== true) {
                   pasteSelection = function pasteSelection(paste) {
